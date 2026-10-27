@@ -192,11 +192,7 @@ protected:
                 nodes.push_back(QPointF(x,y));
             }
             QPainterPath line(nodes.front());
-            for(int i=1;i<nodes.size();++i){
-                const QPointF mid=(nodes[i-1]+nodes[i])/2.0;
-                line.quadTo(nodes[i-1],mid);
-            }
-            line.lineTo(nodes.back());
+            for(int i=1;i<nodes.size();++i)line.lineTo(nodes[i]);
             if(s==0){
                 QPainterPath area=line;area.lineTo(nodes.back().x(),inner.bottom());
                 area.lineTo(nodes.front().x(),inner.bottom());area.closeSubpath();
