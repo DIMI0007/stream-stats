@@ -1,8 +1,19 @@
-# Stream Stats 1.0.0
+# Stream Stats 1.0.1
 
 Нативный Dock-плагин OBS Studio 33 для Windows x64. Показывает системную нагрузку,
 суммарную статистику трансляции и запись в одной панели. Интерфейс адаптируется
 к узкому Dock и к горизонтальному размеру стандартной панели статистики OBS.
+
+| Вертикальная панель | Горизонтальная панель |
+| --- | --- |
+| ![Stream Stats вертикально](docs/screenshots/vertical.png) | ![Stream Stats горизонтально](docs/screenshots/horizontal.png) |
+
+*Снимки 1.0.1 созданы в тестовом окружении; значения нагрузки и потоков демонстрационные.*
+[Компактная горизонтальная панель](docs/screenshots/compact.png) помещается в размеры стандартной статистики OBS.
+
+## Установка
+
+Закройте OBS и [скачайте архив последней успешной сборки](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml). Скопируйте папку `stream-stats` из архива в `C:\ProgramData\obs-studio\plugins\`, затем запустите OBS и откройте панель **Stream Stats**. [Подробная инструкция](INSTALL_RU.md).
 
 ## Показатели
 
