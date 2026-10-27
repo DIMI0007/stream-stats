@@ -5,6 +5,8 @@
 #include <util/bmem.h>
 #endif
 #include <QFrame>
+#include <QIcon>
+#include <QPixmap>
 #include <QComboBox>
 #include <QDir>
 #include <QFileInfo>
@@ -54,15 +56,25 @@ public:
 protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);p.setRenderHint(QPainter::Antialiasing);
-        p.scale(width()/28.0,height()/28.0);
-        p.setPen(QPen(QColor("#00df8c"),2));p.setBrush(QColor("#073326"));
-        p.drawEllipse(QRectF(2,2,24,24));
-        p.setPen(Qt::NoPen);p.setBrush(QColor("#00df8c"));
-        p.drawRoundedRect(QRectF(7,14,3,7),1,1);
-        p.drawRoundedRect(QRectF(12,9,3,12),1,1);
-        p.drawRoundedRect(QRectF(17,12,3,9),1,1);
+        p.scale(width()/32.0,height()/32.0);
+        p.setPen(Qt::NoPen);p.setBrush(QColor("#06382c"));
+        p.drawRoundedRect(QRectF(0,0,32,32),9,9);
+        p.setBrush(QColor("#00df8c"));
+        p.drawRoundedRect(QRectF(7,15,4,10),1.5,1.5);
+        p.drawRoundedRect(QRectF(14,8,4,17),1.5,1.5);
+        p.drawRoundedRect(QRectF(21,12,4,13),1.5,1.5);
     }
 };
+
+QIcon settingsIcon(){
+    QPixmap image(48,48);image.fill(Qt::transparent);
+    QPainter p(&image);p.setRenderHint(QPainter::Antialiasing);p.scale(2,2);
+    p.setPen(QPen(QColor("#aebde3"),1.7,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
+    p.setBrush(Qt::NoBrush);p.translate(12,12);
+    for(int i=0;i<8;++i){p.drawLine(QPointF(0,-8),QPointF(0,-10));p.rotate(45);}
+    p.drawEllipse(QPointF(0,0),6.8,6.8);p.drawEllipse(QPointF(0,0),2.5,2.5);
+    p.end();image.setDevicePixelRatio(2);return QIcon(image);
+}
 
 class SectionIcon final : public QWidget {
 public:
@@ -209,12 +221,12 @@ private:
 StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
     setObjectName("StreamStatsDock");setMinimumSize(310,200);
     setStyleSheet(R"(
-      QWidget#StreamStatsDock{background:#07111b;color:#dbe7fa;font-family:'Segoe UI';font-size:10px;}
+      QWidget#StreamStatsDock{background:#080f18;color:#dbe7fa;font-family:'Segoe UI';font-size:10px;}
       QFrame#StatsCard{background:#0c1725;border:1px solid #29415a;border-radius:7px;}
       QLabel#CardTitle{font-size:12px;font-weight:700;}
       QLabel#MetricName{color:#9fb5d5;font-size:10px;}
       QLabel#MetricValue{color:#edf5ff;font-size:10px;font-weight:700;}
-      QLabel#DockTitle{font-size:17px;font-weight:700;color:#e8f5ff;}
+      QLabel#DockTitle{font-size:17px;font-weight:700;color:#e7fff4;}
       QLabel#OutputCount{color:#ffe184;background:#24301f;border:1px solid #70571b;border-radius:7px;font-size:10px;font-weight:700;padding:1px 6px;}
       QWidget#Footer{background:#080f18;}
       QLabel#Credit{color:#9299a5;background:#080f18;font-size:11px;}
@@ -223,6 +235,8 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
       QComboBox#SystemMetricSelector QAbstractItemView{background:#142238;color:#dbe7fa;selection-background-color:#23506a;}
       QPushButton{color:#dbe7fa;background:#142238;border:1px solid #344b6a;border-radius:6px;padding:2px 6px;}
       QPushButton:hover{background:#1b3050;border-color:#5983b5;}
+      QPushButton#SettingsButton{color:#e1ebff;background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #202a3b,stop:1 #141d2b);border:1px solid #39465d;border-radius:8px;padding:0;}
+      QPushButton#SettingsButton:hover{background:#26344d;border-color:#6476a0;}
       QPushButton#ActiveRange{background:#193d4b;border-color:#00bfa2;color:#e8ffff;}
       QScrollArea{border:0;background:transparent;}
       QScrollArea QWidget#CardHost{background:transparent;}
@@ -244,7 +258,11 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
 void StatsDock::shutdown(){closing_=true;tick_.stop();}
 #ifdef STREAM_STATS_PREVIEW
 void StatsDock::previewSamples(int count){for(int i=0;i<count;++i)updateSnapshot(collector_.sample());}
-void StatsDock::previewOffline(){updateSnapshot(Snapshot{});}
+void StatsDock::previewOffline(){
+    Snapshot offline=last_;
+    offline.stream=StreamReading{};offline.record=RecordReading{};
+    updateSnapshot(offline);
+}
 #endif
 bool StatsDock::russian() const {
     if(language_=="ru")return true;if(language_=="en")return false;
@@ -266,8 +284,8 @@ void StatsDock::buildPages() {
 
 QWidget* StatsDock::buildHome() {
     auto* page=new QWidget;auto* outer=new QVBoxLayout(page);
-    outer->setContentsMargins(6,4,6,3);outer->setSpacing(4);
-    auto* top=new QHBoxLayout;top->setContentsMargins(1,0,1,0);top->setSpacing(6);
+    outer->setContentsMargins(8,8,8,3);outer->setSpacing(4);
+    auto* top=new QHBoxLayout;top->setContentsMargins(2,2,2,2);top->setSpacing(7);
     top->addWidget(new StatsMark);
     auto* heading=new QLabel("Stream Stats");heading->setObjectName("DockTitle");top->addWidget(heading,1);
     for(int minutes:{1,5,15}){
@@ -276,8 +294,8 @@ QWidget* StatsDock::buildHome() {
         QObject::connect(button,&QPushButton::clicked,this,[this,minutes]{setRange(minutes);});
         top->addWidget(button);rangeButtons_.append(button);
     }
-    auto* gear=new QPushButton(QString::fromUtf8("⚙"));gear->setObjectName("SettingsButton");gear->setFixedSize(28,27);
-    gear->setStyleSheet("font-size:18px;padding:0;");
+    auto* gear=new QPushButton;gear->setObjectName("SettingsButton");gear->setFixedSize(30,28);
+    gear->setIcon(settingsIcon());gear->setIconSize(QSize(19,19));
     gear->setToolTip(phrase("Настройки","Settings"));
     QObject::connect(gear,&QPushButton::clicked,this,[this]{pages_->setCurrentWidget(settings_);});
     top->addWidget(gear);outer->addLayout(top);
@@ -471,14 +489,11 @@ void StatsDock::arrangeCards(){
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;")
             .arg(label->property("accent").toString()).arg(roomy?22:wide?12:15));
     if(auto* title=home_->findChild<QLabel*>("DockTitle"))
-        title->setStyleSheet(QString("font-size:%1px;font-weight:700;color:#e8f5ff;").arg(roomy?30:17));
-    if(auto* mark=home_->findChild<QWidget*>("StatsMark"))mark->setFixedSize(roomy?45:28,roomy?45:28);
+        title->setStyleSheet("font-size:17px;font-weight:700;color:#e7fff4;");
+    if(auto* mark=home_->findChild<QWidget*>("StatsMark"))mark->setFixedSize(28,28);
     for(auto* mark:home_->findChildren<QWidget*>("SectionIcon"))
         mark->setFixedSize(roomy?28:18,roomy?28:18);
-    if(auto* gear=home_->findChild<QPushButton*>("SettingsButton")){
-        gear->setFixedSize(roomy?42:28,roomy?40:27);
-        gear->setStyleSheet(QString("font-size:%1px;padding:0;").arg(roomy?25:18));
-    }
+    if(auto* gear=home_->findChild<QPushButton*>("SettingsButton"))gear->setFixedSize(30,28);
     if(systemSelector_)systemSelector_->setFixedSize(roomy?120:wide?74:87,roomy?29:20);
     if(streamCount_)streamCount_->setStyleSheet(QString("color:#ffe184;background:#24301f;border:1px solid #70571b;border-radius:7px;font-size:%1px;font-weight:700;padding:1px 6px;").arg(roomy?14:10));
     for(auto* button:rangeButtons_)button->setFixedSize(roomy?48:34,roomy?32:23);
@@ -529,10 +544,11 @@ void StatsDock::updateSnapshot(const Snapshot& value){
     streamBitrate_->setText((value.stream.incomplete?QString::fromUtf8("≥ "):QString())+rate(value.stream.kbps));
     streamBitrate_->setToolTip(value.stream.incomplete?phrase("Сумма неполная: не все активные выходы отдают счётчики.",
         "Incomplete total: some active outputs do not expose measurable counters."):QString());
-    streamCount_->setText(phrase("Потоков ","Outputs ")+locale.toString(value.stream.activeOutputs));
+    streamCount_->setText(phrase("Потоков ","Outputs ")+
+        (value.stream.incomplete?QString::fromUtf8("≥ "):QString())+locale.toString(value.stream.activeOutputs));
     streamCount_->setToolTip(value.stream.outputNames.isEmpty()?
-        phrase("Активных потоковых выходов OBS","Active OBS stream outputs"):
-        phrase("Выходы OBS: ","OBS outputs: ")+value.stream.outputNames.join(", "));
+        phrase("Учтённых потоковых выходов OBS","Counted OBS stream outputs"):
+        phrase("Учтённые выходы OBS: ","Counted OBS outputs: ")+value.stream.outputNames.join(", "));
     streamBytes_->setText(bytesText(value.stream.totalBytes,locale));
     const double loss=value.stream.frames?100.0*double(value.stream.dropped)/double(value.stream.frames):0;
     streamDrop_->setText(locale.toString(value.stream.dropped)+" ("+locale.toString(loss,'f',1)+" %)");
@@ -554,6 +570,8 @@ void StatsDock::updateSnapshot(const Snapshot& value){
         "Recording time since Stream Stats observed its start; pauses excluded."));
     recordDisk_->setText(value.record.diskAvailable?bytesText(value.record.freeBytes,locale):"—");
     recordEta_->setText(value.record.secondsUntilFull>=0?duration(value.record.secondsUntilFull):"—");
+    systemChart_->setInactiveMessage(systemMetricIndex_==2&&gpuHistory_.count()==0?
+        phrase("GPU недоступен","GPU unavailable"):QString());
     streamChart_->setInactiveMessage(!value.stream.active&&!value.stream.reconnecting?
         phrase("Нет активной трансляции","No active stream"):QString());
     recordChart_->setInactiveMessage(!value.record.active?

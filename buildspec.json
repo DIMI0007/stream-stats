@@ -27,13 +27,13 @@
   },
   "platformConfig": {
     "macos": {
-      "bundleId": "com.example.streamstats"
+      "bundleId": "com.otmorozok.streamstats"
     }
   },
   "name": "stream-stats",
   "displayName": "Stream Stats",
   "version": "1.0.0",
-  "author": "Stream Stats Contributors",
-  "website": "https://github.com",
-  "email": "stream-stats@example.invalid"
+  "author": "OTMOPOZOK",
+  "website": "https://github.com/DIMI0007/stream-stats",
+  "email": ""
 }

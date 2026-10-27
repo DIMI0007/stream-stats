@@ -1,7 +1,7 @@
 name: Build Stream Stats 1.0 (Windows)
 on:
   push:
-    branches: ["codex/stream-stats-build"]
+    branches: ["main", "codex/stream-stats-build"]
   workflow_dispatch:
 permissions:
   contents: read

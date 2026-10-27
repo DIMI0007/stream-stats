@@ -23,6 +23,10 @@ int main(int argc,char** argv) {
        dock.findChildren<QLabel*>("SessionTrafficFooter").size()!=1||
        dock.findChildren<QLabel*>("OutputCount").size()!=1||
        dock.findChildren<QComboBox*>("SystemMetricSelector").size()!=1)return 5;
+    auto* logo=dock.findChild<QWidget*>("StatsMark");
+    auto* gear=dock.findChild<QPushButton*>("SettingsButton");
+    if(!logo||logo->size()!=QSize(28,28)||!gear||gear->size()!=QSize(30,28)||
+       gear->iconSize()!=QSize(19,19)||gear->icon().isNull())return 6;
     std::fprintf(stderr,"Preview samples prepared\n");std::fflush(stderr);
     auto capture=[&](const char* file,int width,int height,bool requireNoScroll){
         std::fprintf(stderr,"Capture %s begin\n",file);std::fflush(stderr);
