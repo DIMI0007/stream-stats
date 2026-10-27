@@ -239,23 +239,23 @@ private:
 StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
     setObjectName("StreamStatsDock");setMinimumSize(275,200);
     setStyleSheet(R"(
-      QWidget#StreamStatsDock{background:#080f18;color:#dbe7fa;font-family:'Segoe UI';font-size:10px;}
-      QFrame#StatsCard{background:#0c1725;border:1px solid #29415a;border-radius:7px;}
+      QWidget#StreamStatsDock{background:#080f18;color:#dfe8ff;font-family:'Segoe UI';font-size:10px;}
+      QFrame#StatsCard{background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #101925,stop:1 #0b131e);border:1px solid #263244;border-radius:8px;}
       QLabel#CardTitle{font-size:12px;font-weight:700;}
-      QLabel#MetricName{color:#9fb5d5;font-size:10px;}
-      QLabel#MetricValue{color:#edf5ff;font-size:10px;font-weight:700;}
+      QLabel#MetricName{color:#8ea1c0;font-size:10px;}
+      QLabel#MetricValue{color:#dfe8ff;font-size:10px;font-weight:700;}
       QLabel#DockTitle{font-size:17px;font-weight:700;color:#e7fff4;}
       QLabel#OutputCount{color:#ffe184;background:#24301f;border:1px solid #70571b;border-radius:7px;font-size:10px;font-weight:700;padding:1px 6px;}
       QWidget#Footer{background:#080f18;}
       QLabel#Credit{color:#9299a5;background:#080f18;font-size:11px;}
       QLabel#SessionTrafficFooter{color:#72e9f4;background:#080f18;font-size:10px;}
-      QComboBox#SystemMetricSelector{color:#c9ddf5;background:#142238;border:1px solid #34506e;border-radius:5px;padding:1px 5px;font-size:10px;}
-      QComboBox#SystemMetricSelector QAbstractItemView{background:#142238;color:#dbe7fa;selection-background-color:#23506a;}
-      QPushButton{color:#dbe7fa;background:#142238;border:1px solid #344b6a;border-radius:6px;padding:2px 6px;}
-      QPushButton:hover{background:#1b3050;border-color:#5983b5;}
+      QComboBox#SystemMetricSelector{color:#e7eeff;background:#0c1420;border:1px solid #344865;border-radius:6px;padding:1px 5px;font-size:10px;}
+      QComboBox#SystemMetricSelector QAbstractItemView{background:#101a2b;color:#e7eeff;selection-background-color:#26344d;}
+      QPushButton{color:#e1ebff;background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #202a3b,stop:1 #141d2b);border:1px solid #39465d;border-radius:6px;padding:2px 6px;}
+      QPushButton:hover{background:#26344d;border-color:#6476a0;}
       QPushButton#SettingsButton{color:#e1ebff;background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #202a3b,stop:1 #141d2b);border:1px solid #39465d;border-radius:8px;padding:0;}
       QPushButton#SettingsButton:hover{background:#26344d;border-color:#6476a0;}
-      QPushButton#ActiveRange{background:#193d4b;border-color:#00bfa2;color:#e8ffff;}
+      QPushButton#ActiveRange{background:#102c29;border-color:#00d58a;color:#b8ffe1;}
       QScrollArea{border:0;background:transparent;}
       QScrollArea QWidget#CardHost{background:transparent;}
     )");
@@ -323,7 +323,7 @@ QWidget* StatsDock::buildHome() {
     cards_->setContentsMargins(0,0,0,0);cards_->setSpacing(5);
     QVBoxLayout* body=nullptr;
     QHBoxLayout* systemHeader=nullptr;
-    systemCard_=card(phrase("Система","System"),QColor("#4addd3"),0,body,&systemHeader);
+    systemCard_=card(phrase("Система","System"),QColor("#72e9f4"),0,body,&systemHeader);
     systemSelector_=new QComboBox;systemSelector_->setObjectName("SystemMetricSelector");
     systemSelector_->addItems({phrase("CPU ПК","PC CPU"),phrase("CPU OBS","OBS CPU"),"GPU","FPS"});
     systemSelector_->setToolTip(phrase("Показатель системного графика","System graph metric"));
@@ -338,17 +338,17 @@ QWidget* StatsDock::buildHome() {
     render_=addMetric(metricGrids_[0],phrase("Рендер","Render"));
     renderDrop_=addMetric(metricGrids_[0],phrase("Пропуск ренд.","Render missed"));
     encodeDrop_=addMetric(metricGrids_[0],phrase("Пропуск код.","Encode skipped"));
-    systemChart_=new Chart({{&cpuHistory_,QColor("#00dfa4")}});
-    systemChart_->setSeries({{&cpuHistory_,QColor("#00dfa4")}},"%",phrase("CPU ПК","PC CPU"));
+    systemChart_=new Chart({{&cpuHistory_,QColor("#07df91")}});
+    systemChart_->setSeries({{&cpuHistory_,QColor("#07df91")}},"%",phrase("CPU ПК","PC CPU"));
     QObject::connect(systemSelector_,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int index){
         if(!systemChart_)return;
         systemMetricIndex_=index;
         QSettings saved(configFile(),QSettings::IniFormat);saved.setValue("systemMetric",index);
         switch(index){
-        case 1:systemChart_->setSeries({{&obsCpuHistory_,QColor("#43b7ff")}},"%",phrase("CPU OBS","OBS CPU"));break;
-        case 2:systemChart_->setSeries({{&gpuHistory_,QColor("#aa79ff")}},"%","GPU");break;
-        case 3:systemChart_->setSeries({{&fpsHistory_,QColor("#ffcc49")}},"FPS","FPS");break;
-        default:systemChart_->setSeries({{&cpuHistory_,QColor("#00dfa4")}},"%",phrase("CPU ПК","PC CPU"));break;
+        case 1:systemChart_->setSeries({{&obsCpuHistory_,QColor("#59dfff")}},"%",phrase("CPU OBS","OBS CPU"));break;
+        case 2:systemChart_->setSeries({{&gpuHistory_,QColor("#b995ff")}},"%","GPU");break;
+        case 3:systemChart_->setSeries({{&fpsHistory_,QColor("#ffdc45")}},"FPS","FPS");break;
+        default:systemChart_->setSeries({{&cpuHistory_,QColor("#07df91")}},"%",phrase("CPU ПК","PC CPU"));break;
         }
     });
     systemSelector_->setCurrentIndex(systemMetricIndex_);
@@ -356,7 +356,7 @@ QWidget* StatsDock::buildHome() {
     body->addWidget(systemChart_);
 
     QHBoxLayout* streamHeader=nullptr;
-    streamCard_=card(phrase("Трансляция","Stream"),QColor("#ffce43"),1,body,&streamHeader);
+    streamCard_=card(phrase("Трансляция","Stream"),QColor("#ffdc45"),1,body,&streamHeader);
     streamCount_=new QLabel("0");streamCount_->setObjectName("OutputCount");
     streamCount_->setAlignment(Qt::AlignCenter);streamCount_->setToolTip(phrase("Активных потоковых выходов OBS","Active OBS stream outputs"));
     streamHeader->addWidget(streamCount_);
@@ -366,12 +366,12 @@ QWidget* StatsDock::buildHome() {
     streamBytes_=addMetric(metricGrids_[1],phrase("Отправлено","Sent"));
     streamDrop_=addMetric(metricGrids_[1],phrase("Потери сети","Network loss"));
     body->addStretch(1);
-    streamChart_=new Chart({{&streamHistory_,QColor("#ffbf37")}});
-    streamChart_->setSeries({{&streamHistory_,QColor("#ffbf37")}},"kb/s",phrase("Общий битрейт","Total bitrate"));
+    streamChart_=new Chart({{&streamHistory_,QColor("#ffdc45")}});
+    streamChart_->setSeries({{&streamHistory_,QColor("#ffdc45")}},"kb/s",phrase("Общий битрейт","Total bitrate"));
     streamChart_->setToolTip(phrase("Суммарный фактический битрейт активных выходов","Actual aggregate bitrate of active outputs"));
     body->addWidget(streamChart_);
 
-    recordCard_=card(phrase("Запись","Recording"),QColor("#ff556e"),2,body);
+    recordCard_=card(phrase("Запись","Recording"),QColor("#ff8484"),2,body);
     metricGrids_[2]=metricGrid(body);
     recordStatus_=addMetric(metricGrids_[2],phrase("Статус","Status"));
     recordBitrate_=addMetric(metricGrids_[2],phrase("Битрейт","Bitrate"));
@@ -381,8 +381,8 @@ QWidget* StatsDock::buildHome() {
     recordDisk_=addMetric(metricGrids_[2],phrase("Диск свободен","Disk free"));
     recordEta_=addMetric(metricGrids_[2],phrase("До заполн.","Until full"));
     body->addStretch(1);
-    recordChart_=new Chart({{&recordHistory_,QColor("#23cdec")}});
-    recordChart_->setSeries({{&recordHistory_,QColor("#23cdec")}},"kb/s",phrase("Битрейт записи","Record bitrate"));
+    recordChart_=new Chart({{&recordHistory_,QColor("#72e9f4")}});
+    recordChart_->setSeries({{&recordHistory_,QColor("#72e9f4")}},"kb/s",phrase("Битрейт записи","Record bitrate"));
     recordChart_->setToolTip(phrase("Фактический битрейт записи","Actual recording bitrate"));
     body->addWidget(recordChart_);
     scroller->setWidget(host);outer->addWidget(scroller,1);
@@ -468,7 +468,7 @@ void StatsDock::arrangeCards(){
         for(auto* frame:{systemCard_,streamCard_,recordCard_})
             frame->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Maximum);
     }
-    const int chartHeight=roomy?155:wide?23:60;
+    const int chartHeight=roomy?155:wide?22:60;
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->setDisplayHeight(chartHeight);
     const int columns=((wide&&!roomy)||narrow)?1:2;
     const int metricHeight=roomy?47:wide?13:34;
@@ -485,7 +485,7 @@ void StatsDock::arrangeCards(){
             auto* row=rows[i];
             row->setFixedHeight(metricHeight);
             row->setStyleSheet(columns==2?
-                "QWidget#MetricRow{background:#0d2030;border:1px solid #243d54;border-radius:5px;}":
+                "QWidget#MetricRow{background:#111f2d;border:1px solid #304a5d;border-radius:5px;}":
                 "QWidget#MetricRow{background:transparent;border:0;}");
             auto* rowLayout=static_cast<QHBoxLayout*>(row->layout());
             rowLayout->setContentsMargins(columns==2?5:0,0,columns==2?5:0,0);
@@ -495,15 +495,15 @@ void StatsDock::arrangeCards(){
         }
     }
     for(auto* label:home_->findChildren<QLabel*>("MetricName"))
-        label->setStyleSheet(QString("color:#9fb5d5;font-size:%1px;").arg(metricFont));
+        label->setStyleSheet(QString("color:#8ea1c0;font-size:%1px;").arg(metricFont));
     for(auto* label:home_->findChildren<QLabel*>("MetricValue"))
-        label->setStyleSheet(QString("color:#edf5ff;font-size:%1px;font-weight:700;").arg(metricFont));
+        label->setStyleSheet(QString("color:#dfe8ff;font-size:%1px;font-weight:700;").arg(metricFont));
     const auto accentValue=[&](QLabel* label,const char* color){
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;").arg(color).arg(metricFont));
     };
-    for(auto* label:{cpuObs_,cpuPc_,gpu_,fps_})accentValue(label,"#29e5a1");
-    accentValue(streamBitrate_,"#ffce43");
-    accentValue(recordBitrate_,"#35d9e8");
+    for(auto* label:{cpuObs_,cpuPc_,gpu_,fps_})accentValue(label,"#07df91");
+    accentValue(streamBitrate_,"#ffdc45");
+    accentValue(recordBitrate_,"#72e9f4");
     for(auto* label:home_->findChildren<QLabel*>("CardTitle"))
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;")
             .arg(label->property("accent").toString()).arg(roomy?22:wide?12:15));
@@ -559,7 +559,7 @@ void StatsDock::updateSnapshot(const Snapshot& value){
     streamStatus_->setText(value.stream.reconnecting?phrase("● Переподкл.","● Reconnecting"):
         value.stream.active?phrase("● В эфире","● Live"):phrase("● Неактивна","● Offline"));
     streamStatus_->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;")
-        .arg(value.stream.reconnecting?"#ffca56":value.stream.active?"#00df8c":"#8fa5c2")
+        .arg(value.stream.reconnecting?"#ffdc45":value.stream.active?"#07df91":"#8ea1c0")
         .arg(layoutMode_==2?14:10));
     streamBitrate_->setText((value.stream.incomplete?QString::fromUtf8("≥ "):QString())+rate(value.stream.kbps));
     streamBitrate_->setToolTip(value.stream.incomplete?phrase("Сумма неполная: не все активные выходы отдают счётчики.",
@@ -575,7 +575,7 @@ void StatsDock::updateSnapshot(const Snapshot& value){
     recordStatus_->setText(value.record.paused?phrase("● Пауза","● Paused"):
         value.record.active?"● REC":phrase("● Нет записи","● Offline"));
     recordStatus_->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;")
-        .arg(value.record.paused?"#ffca56":value.record.active?"#ff5570":"#8fa5c2")
+        .arg(value.record.paused?"#ffdc45":value.record.active?"#ff8484":"#8ea1c0")
         .arg(layoutMode_==2?14:10));
     recordBitrate_->setText(value.record.active?rate(value.record.kbps):"—");
     recordFile_->setText(value.record.fileSizeAvailable?
