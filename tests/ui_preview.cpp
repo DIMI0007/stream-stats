@@ -43,6 +43,8 @@ int main(int argc,char** argv) {
     if(!capture("compact-720x260.png",720,260,true))return 1;
     if(!capture("horizontal-1600x900.png",1600,900,true))return 2;
     if(!capture("vertical-360x900.png",360,900,true))return 3;
+    dock.previewOffline();
+    if(!capture("vertical-offline-310x900.png",310,900,true))return 4;
     std::puts("Responsive Stream Stats UI previews passed");
     return 0;
 }
