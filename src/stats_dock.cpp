@@ -57,12 +57,12 @@ protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);p.setRenderHint(QPainter::Antialiasing);
         p.scale(width()/32.0,height()/32.0);
-        p.setPen(Qt::NoPen);p.setBrush(QColor("#06382c"));
-        p.drawRoundedRect(QRectF(0,0,32,32),9,9);
-        p.setBrush(QColor("#00df8c"));
-        p.drawRoundedRect(QRectF(7,15,4,10),1.5,1.5);
-        p.drawRoundedRect(QRectF(14,8,4,17),1.5,1.5);
-        p.drawRoundedRect(QRectF(21,12,4,13),1.5,1.5);
+        p.setPen(QPen(QColor("#00df8c"),2.4));p.setBrush(QColor("#06382c"));
+        p.drawEllipse(QRectF(2,2,28,28));
+        p.setPen(Qt::NoPen);p.setBrush(QColor("#00df8c"));
+        p.drawRoundedRect(QRectF(8,16,3.5,9),1.4,1.4);
+        p.drawRoundedRect(QRectF(14.3,9,3.5,16),1.4,1.4);
+        p.drawRoundedRect(QRectF(20.5,13,3.5,12),1.4,1.4);
     }
 };
 
