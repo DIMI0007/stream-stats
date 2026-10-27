@@ -39,7 +39,7 @@ set_tests_properties(stream-aggregation-and-history PROPERTIES
   ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:Qt6::Core>")
 
 add_executable(stream-stats-ui-preview tests/ui_preview.cpp src/stats_dock.cpp src/stats_collector.cpp)
-target_include_directories(stream-stats-ui-preview PRIVATE src)
+target_include_directories(stream-stats-ui-preview PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_compile_definitions(stream-stats-ui-preview PRIVATE STREAM_STATS_PREVIEW QT_NO_KEYWORDS)
 target_link_libraries(stream-stats-ui-preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
 if(MSVC)
