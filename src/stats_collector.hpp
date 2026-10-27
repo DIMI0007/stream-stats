@@ -1,7 +1,6 @@
 #pragma once
 
 #include "stats_model.hpp"
-#include <QDateTime>
 #include <QElapsedTimer>
 #include <QString>
 #include <atomic>
@@ -23,7 +22,7 @@ struct RecordReading {
     double kbps = 0,megabytesPerSecond = 0;
     quint64 fileBytes = 0,freeBytes = 0;
     qint64 elapsedSeconds = 0,secondsUntilFull = -1;
-    bool pathAvailable = false;
+    bool fileSizeAvailable = false,fileSizeEstimated = false,diskAvailable = false;
 };
 struct Snapshot {
     SystemReading system;
@@ -54,7 +53,8 @@ private:
     quint64 recordPreviousBytes_=0;
     bool recordPreviousReady_=false;
     double recordSmoothedBytesPerSecond_=0;
-    QDateTime recordStarted_;
+    double recordElapsedSeconds_ = 0;
+    bool recordWasActive_ = false;
     QString recordPath_;
 };
 

@@ -14,6 +14,7 @@
 #include <QPainterPath>
 #include <QResizeEvent>
 #include <QSettings>
+#include <QSizePolicy>
 #include <QStyle>
 #include <QVBoxLayout>
 #include <QLocale>
@@ -420,9 +421,15 @@ void StatsDock::arrangeCards(){
     if(wide){
         cards_->addWidget(systemCard_,0,0);cards_->addWidget(streamCard_,0,1);cards_->addWidget(recordCard_,0,2);
         for(int i=0;i<3;++i)cards_->setColumnStretch(i,1);
+        cards_->setAlignment(Qt::Alignment());
+        for(auto* frame:{systemCard_,streamCard_,recordCard_})
+            frame->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Expanding);
     }else{
         cards_->addWidget(systemCard_,0,0);cards_->addWidget(streamCard_,1,0);cards_->addWidget(recordCard_,2,0);
         cards_->setColumnStretch(0,1);cards_->setColumnStretch(1,0);cards_->setColumnStretch(2,0);
+        cards_->setAlignment(Qt::AlignTop);
+        for(auto* frame:{systemCard_,streamCard_,recordCard_})
+            frame->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Maximum);
     }
     const int chartHeight=roomy?155:wide?27:60;
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->setDisplayHeight(chartHeight);
@@ -445,13 +452,21 @@ void StatsDock::arrangeCards(){
                 "QWidget#MetricRow{background:transparent;border:0;}");
             auto* rowLayout=static_cast<QHBoxLayout*>(row->layout());
             rowLayout->setContentsMargins(columns==2?5:0,0,columns==2?5:0,0);
-            grid->addWidget(row,i/columns,i%columns);
+            if(columns==2&&i==rows.size()-1&&rows.size()%2)
+                grid->addWidget(row,i/columns,0,1,2);
+            else grid->addWidget(row,i/columns,i%columns);
         }
     }
     for(auto* label:home_->findChildren<QLabel*>("MetricName"))
         label->setStyleSheet(QString("color:#9fb5d5;font-size:%1px;").arg(metricFont));
     for(auto* label:home_->findChildren<QLabel*>("MetricValue"))
         label->setStyleSheet(QString("color:#edf5ff;font-size:%1px;font-weight:700;").arg(metricFont));
+    const auto accentValue=[&](QLabel* label,const char* color){
+        label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;").arg(color).arg(metricFont));
+    };
+    for(auto* label:{cpuObs_,cpuPc_,gpu_,fps_})accentValue(label,"#29e5a1");
+    accentValue(streamBitrate_,"#ffce43");
+    accentValue(recordBitrate_,"#35d9e8");
     for(auto* label:home_->findChildren<QLabel*>("CardTitle"))
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;")
             .arg(label->property("accent").toString()).arg(roomy?22:wide?12:15));
@@ -515,6 +530,9 @@ void StatsDock::updateSnapshot(const Snapshot& value){
     streamBitrate_->setToolTip(value.stream.incomplete?phrase("Сумма неполная: не все активные выходы отдают счётчики.",
         "Incomplete total: some active outputs do not expose measurable counters."):QString());
     streamCount_->setText(phrase("Потоков ","Outputs ")+locale.toString(value.stream.activeOutputs));
+    streamCount_->setToolTip(value.stream.outputNames.isEmpty()?
+        phrase("Активных потоковых выходов OBS","Active OBS stream outputs"):
+        phrase("Выходы OBS: ","OBS outputs: ")+value.stream.outputNames.join(", "));
     streamBytes_->setText(bytesText(value.stream.totalBytes,locale));
     const double loss=value.stream.frames?100.0*double(value.stream.dropped)/double(value.stream.frames):0;
     streamDrop_->setText(locale.toString(value.stream.dropped)+" ("+locale.toString(loss,'f',1)+" %)");
@@ -524,12 +542,17 @@ void StatsDock::updateSnapshot(const Snapshot& value){
         .arg(value.record.paused?"#ffca56":value.record.active?"#ff5570":"#8fa5c2")
         .arg(layoutMode_==2?14:10));
     recordBitrate_->setText(value.record.active?rate(value.record.kbps):"—");
-    recordFile_->setText(value.record.pathAvailable?bytesText(value.record.fileBytes,locale):"—");
+    recordFile_->setText(value.record.fileSizeAvailable?
+        (value.record.fileSizeEstimated?QString::fromUtf8("≈ "):QString())+bytesText(value.record.fileBytes,locale):"—");
+    recordFile_->setToolTip(value.record.fileSizeEstimated?
+        phrase("Оценка по обработанным байтам OBS; при разделении записи может включать предыдущие файлы.",
+            "Estimated from OBS processed bytes; split recordings may include previous files."):
+        phrase("Размер текущего файла на диске","Current file size on disk"));
     recordSpeed_->setText(value.record.active?locale.toString(value.record.megabytesPerSecond,'f',1)+" MB/s":"—");
     recordTime_->setText(value.record.active?duration(value.record.elapsedSeconds):"—");
-    recordTime_->setToolTip(phrase("Оценка по времени создания текущего файла; паузы могут входить во время.",
-        "Estimated from current file creation time; pauses may be included."));
-    recordDisk_->setText(value.record.pathAvailable?bytesText(value.record.freeBytes,locale):"—");
+    recordTime_->setToolTip(phrase("Время записи с момента, когда Stream Stats увидел её запуск; паузы исключены.",
+        "Recording time since Stream Stats observed its start; pauses excluded."));
+    recordDisk_->setText(value.record.diskAvailable?bytesText(value.record.freeBytes,locale):"—");
     recordEta_->setText(value.record.secondsUntilFull>=0?duration(value.record.secondsUntilFull):"—");
     streamChart_->setInactiveMessage(!value.stream.active&&!value.stream.reconnecting?
         phrase("Нет активной трансляции","No active stream"):QString());

@@ -3,6 +3,7 @@
 #include <QHash>
 #include <QSet>
 #include <QString>
+#include <QStringList>
 #include <QVector>
 #include <algorithm>
 #include <array>
@@ -19,6 +20,7 @@ struct OutputReading {
     bool reconnecting = false;
     bool stream = false;
     bool possibleUnmeasuredStream = false;
+    QString name;
     quint64 bytes = 0;
     quint64 frames = 0;
     quint64 dropped = 0;
@@ -33,6 +35,7 @@ struct StreamReading {
     quint64 totalBytes = 0;
     quint64 dropped = 0;
     quint64 frames = 0;
+    QStringList outputNames;
 };
 
 // One identity is counted once per sample, even if frontend and plugin APIs
@@ -48,6 +51,7 @@ public:
             if (!input.stream || !input.identity || seen.contains(input.identity)) continue;
             seen.insert(input.identity);
             ++value.activeOutputs;
+            if(!input.name.isEmpty())value.outputNames.push_back(input.name);
             value.active |= input.active;
             value.reconnecting |= input.reconnecting;
             auto& previous = counters_[input.identity];

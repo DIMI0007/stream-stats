@@ -22,7 +22,7 @@ Snapshot Collector::sample() {
     value.record.fileBytes=quint64(26.43*1024*1024*1024);
     value.record.freeBytes=319ull*1024*1024*1024;
     value.record.elapsedSeconds=4894;value.record.secondsUntilFull=51120;
-    value.record.pathAvailable=true;
+    value.record.fileSizeAvailable=true;value.record.diskAvailable=true;
     return value;
 }
 void Collector::gpuLoop() {}
@@ -100,6 +100,7 @@ bool collectOutput(void* opaque,obs_output_t* output) {
     const bool possible=!stream&&!knownLocal;
     OutputReading reading;
     reading.identity=reinterpret_cast<quintptr>(output);
+    if(const char* name=obs_output_get_name(output))reading.name=QString::fromUtf8(name);
     reading.active=active;reading.reconnecting=reconnecting;
     reading.stream=stream;reading.possibleUnmeasuredStream=possible;
     if(stream) {
@@ -176,26 +177,56 @@ Snapshot Collector::sample() {
     result.record.active=obs_frontend_recording_active();
     result.record.paused=result.record.active&&obs_frontend_recording_paused();
     if(result.record.active) {
-        char* raw=obs_frontend_get_current_record_output_path();
-        const QString path=raw?QString::fromUtf8(raw):QString();
-        if(raw)bfree(raw);
-        if(path!=recordPath_) {
-            recordPath_=path;recordPreviousReady_=false;
+        if(!recordWasActive_){
+            recordElapsedSeconds_=0;recordPreviousReady_=false;
             recordSmoothedBytesPerSecond_=0;
-            recordStarted_={};
+        }else if(!result.record.paused&&seconds>0&&seconds<10){
+            recordElapsedSeconds_+=seconds;
         }
-        QFileInfo file(path);
-        result.record.pathAvailable=!path.isEmpty()&&file.exists();
-        if(result.record.pathAvailable) {
-            result.record.fileBytes=quint64(std::max<qint64>(0,file.size()));
-            if(!recordStarted_.isValid())
-                recordStarted_=file.birthTime().isValid()?file.birthTime():QDateTime::currentDateTime();
-            const QStorageInfo disk(file.absolutePath());
-            if(disk.isValid()&&disk.isReady())result.record.freeBytes=quint64(std::max<qint64>(0,disk.bytesAvailable()));
-        } else if(!recordStarted_.isValid())recordStarted_=QDateTime::currentDateTime();
-        if(recordStarted_.isValid())
-            result.record.elapsedSeconds=std::max<qint64>(0,recordStarted_.secsTo(QDateTime::currentDateTime()));
+        recordWasActive_=true;
+        result.record.elapsedSeconds=qint64(recordElapsedSeconds_);
+        char* raw=obs_frontend_get_current_record_output_path();
+        QString directory=raw?QString::fromUtf8(raw):QString();
+        if(raw)bfree(raw);
+        // The frontend API returns the configured recording directory, not
+        // the current filename. Never use its size or creation time as a file.
+        QString currentFile;
+        if(recordOutput){
+            obs_data_t* settings=obs_output_get_settings(recordOutput);
+            if(settings){
+                for(const char* key:{"path","url"}){
+                    const QString candidate=QString::fromUtf8(obs_data_get_string(settings,key));
+                    if(!candidate.isEmpty()&&QFileInfo(candidate).isFile()){
+                        currentFile=candidate;break;
+                    }
+                }
+                obs_data_release(settings);
+            }
+        }
+        if(!currentFile.isEmpty())directory=QFileInfo(currentFile).absolutePath();
+        const QString pathKey=currentFile.isEmpty()?directory:currentFile;
+        if(pathKey!=recordPath_){
+            recordPath_=pathKey;recordPreviousReady_=false;
+            recordSmoothedBytesPerSecond_=0;
+        }
         const quint64 processed=recordOutput?obs_output_get_total_bytes(recordOutput):0;
+        QFileInfo file(currentFile);
+        if(!currentFile.isEmpty()&&file.isFile()){
+            result.record.fileSizeAvailable=true;
+            result.record.fileBytes=quint64(std::max<qint64>(0,file.size()));
+        }
+        if(processed>0&&(!result.record.fileSizeAvailable||result.record.fileBytes==0)){
+            result.record.fileSizeAvailable=true;
+            result.record.fileSizeEstimated=true;
+            result.record.fileBytes=processed;
+        }
+        if(!directory.isEmpty()&&QFileInfo(directory).isDir()){
+            const QStorageInfo disk(directory);
+            if(disk.isValid()&&disk.isReady()){
+                result.record.diskAvailable=true;
+                result.record.freeBytes=quint64(std::max<qint64>(0,disk.bytesAvailable()));
+            }
+        }
         const quint64 current=processed?processed:result.record.fileBytes;
         if(recordPreviousReady_&&current>=recordPreviousBytes_&&seconds>0&&seconds<10&&!result.record.paused) {
             const double perSecond=double(current-recordPreviousBytes_)/seconds;
@@ -203,13 +234,13 @@ Snapshot Collector::sample() {
             result.record.megabytesPerSecond=perSecond/(1024.0*1024.0);
             recordSmoothedBytesPerSecond_=recordSmoothedBytesPerSecond_==0?perSecond:
                 0.15*perSecond+0.85*recordSmoothedBytesPerSecond_;
-            if(recordSmoothedBytesPerSecond_>1024 && result.record.freeBytes>0)
+            if(recordSmoothedBytesPerSecond_>1024 && result.record.diskAvailable)
                 result.record.secondsUntilFull=qint64(std::min(double(std::numeric_limits<qint64>::max()),
                     double(result.record.freeBytes)/recordSmoothedBytesPerSecond_));
         }
         recordPreviousBytes_=current;recordPreviousReady_=true;
     } else {
-        recordPath_.clear();recordStarted_={};recordPreviousReady_=false;
+        recordPath_.clear();recordWasActive_=false;recordElapsedSeconds_=0;recordPreviousReady_=false;
         recordPreviousBytes_=0;recordSmoothedBytesPerSecond_=0;
     }
     if(recordOutput)obs_output_release(recordOutput);

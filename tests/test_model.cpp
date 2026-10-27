@@ -5,9 +5,10 @@
 int main() {
     stats::StreamAccumulator accumulator;
     stats::OutputReading first;first.identity=1;first.active=true;first.stream=true;
+    first.name="Twitch output";
     first.bytes=1000;first.frames=100;first.dropped=2;
     auto value=accumulator.update({first,first},1.0);
-    if(value.activeOutputs!=1||value.totalBytes!=1000||value.dropped!=2||value.kbps!=0)return 1;
+    if(value.activeOutputs!=1||value.outputNames.size()!=1||value.totalBytes!=1000||value.dropped!=2||value.kbps!=0)return 1;
     first.bytes=126000;first.frames=200;first.dropped=3;
     stats::OutputReading second=first;second.identity=2;second.bytes=2000;second.frames=10;second.dropped=0;
     value=accumulator.update({first,first,second},1.0);

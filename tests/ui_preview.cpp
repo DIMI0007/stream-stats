@@ -5,6 +5,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QFrame>
+#include <QComboBox>
 #include <cstdio>
 
 int main(int argc,char** argv) {
@@ -18,6 +19,10 @@ int main(int argc,char** argv) {
     stats::StatsDock dock(&host);
     std::fprintf(stderr,"Preview panel constructed\n");std::fflush(stderr);
     dock.previewSamples(75);
+    if(dock.findChildren<QLabel*>("Credit").size()!=1||
+       dock.findChildren<QLabel*>("SessionTrafficFooter").size()!=1||
+       dock.findChildren<QLabel*>("OutputCount").size()!=1||
+       dock.findChildren<QComboBox*>("SystemMetricSelector").size()!=1)return 5;
     std::fprintf(stderr,"Preview samples prepared\n");std::fflush(stderr);
     auto capture=[&](const char* file,int width,int height,bool requireNoScroll){
         std::fprintf(stderr,"Capture %s begin\n",file);std::fflush(stderr);
