@@ -301,7 +301,7 @@ void StatsDock::buildPages() {
 
 QWidget* StatsDock::buildHome() {
     auto* page=new QWidget;auto* outer=new QVBoxLayout(page);
-    outer->setContentsMargins(8,8,8,3);outer->setSpacing(4);
+    outer->setContentsMargins(8,8,8,3);outer->setSpacing(5);
     auto* top=new QHBoxLayout;top->setContentsMargins(2,2,2,2);top->setSpacing(7);
     top->addWidget(new StatsMark);
     auto* heading=new QLabel("Stream Stats");heading->setObjectName("DockTitle");top->addWidget(heading,1);
