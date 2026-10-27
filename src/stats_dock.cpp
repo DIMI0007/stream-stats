@@ -447,7 +447,7 @@ void StatsDock::setLanguage(const QString& code){
 
 void StatsDock::arrangeCards(){
     if(!cards_||!home_)return;
-    const bool narrow=width()<320;
+    const bool narrow=width()<300;
     const bool wide=width()>=680 && width()>height()*1.3;
     const bool roomy=wide&&width()>=1100&&height()>=600;
     const int mode=roomy?2:wide?1:narrow?3:0;
@@ -471,7 +471,7 @@ void StatsDock::arrangeCards(){
     const int chartHeight=roomy?155:wide?22:60;
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->setDisplayHeight(chartHeight);
     const int columns=((wide&&!roomy)||narrow)?1:2;
-    const int metricHeight=roomy?47:wide?13:34;
+    const int metricHeight=roomy?47:wide?13:narrow?26:34;
     const int metricFont=roomy?14:10;
     for(auto* grid:metricGrids_){
         QVector<QWidget*> rows;
@@ -516,7 +516,10 @@ void StatsDock::arrangeCards(){
     if(auto* gear=home_->findChild<QPushButton*>("SettingsButton"))gear->setFixedSize(30,28);
     if(systemSelector_)systemSelector_->setFixedSize(roomy?120:wide?74:87,roomy?29:20);
     if(streamCount_)streamCount_->setStyleSheet(QString("color:#ffe184;background:#24301f;border:1px solid #70571b;border-radius:7px;font-size:%1px;font-weight:700;padding:1px 6px;").arg(roomy?14:10));
-    for(auto* button:rangeButtons_)button->setFixedSize(roomy?48:narrow?28:34,roomy?32:23);
+    for(auto* button:rangeButtons_){
+        button->setFixedSize(roomy?48:narrow?28:34,roomy?32:23);
+        button->setStyleSheet(narrow?"padding:0 1px;":QString());
+    }
     for(auto* frame:{systemCard_,streamCard_,recordCard_}){
         auto* layout=static_cast<QVBoxLayout*>(frame->layout());
         layout->setContentsMargins(roomy?13:7,roomy?10:wide?4:5,roomy?13:7,roomy?10:wide?4:5);
