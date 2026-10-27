@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QHBoxLayout>
 #include <QComboBox>
 #include <QStackedWidget>
 #include <QTimer>
@@ -38,6 +39,7 @@ private:
     QWidget* home_=nullptr;
     QWidget* settings_=nullptr;
     QGridLayout* cards_=nullptr;
+    QHBoxLayout* headerLayout_=nullptr;
     QGridLayout* metricGrids_[3]{};
     QComboBox* systemSelector_=nullptr;
     QWidget *systemCard_=nullptr,*streamCard_=nullptr,*recordCard_=nullptr;

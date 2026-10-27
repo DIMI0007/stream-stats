@@ -117,7 +117,7 @@ QFrame* card(const QString& title,const QColor& accent,int icon,QVBoxLayout*& bo
     auto* layout=new QVBoxLayout(frame);layout->setContentsMargins(7,5,7,5);layout->setSpacing(2);
     auto* header=new QHBoxLayout;header->setContentsMargins(0,0,0,0);header->setSpacing(5);
     auto* mark=new SectionIcon(icon,accent);mark->setObjectName("SectionIcon");header->addWidget(mark);
-    auto* label=new QLabel(title);label->setObjectName("CardTitle");
+    auto* label=new QLabel(title);label->setObjectName("CardTitle");label->setWordWrap(true);
     label->setProperty("accent",accent.name());label->setMinimumWidth(0);
     label->setStyleSheet(QString("color:%1;").arg(accent.name()));header->addWidget(label,1);
     layout->addLayout(header);
@@ -135,6 +135,7 @@ QLabel* addMetric(QGridLayout* grid,const QString& name) {
     auto* wrapper=new QWidget;wrapper->setObjectName("MetricRow");auto* row=new QHBoxLayout(wrapper);
     row->setContentsMargins(0,0,0,0);row->setSpacing(3);
     auto* left=new QLabel(name);left->setObjectName("MetricName");left->setMinimumWidth(0);
+    left->setWordWrap(true);left->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);
     auto* right=new QLabel("—");right->setObjectName("MetricValue");right->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
     right->setMinimumWidth(0);
     row->addWidget(left,1);row->addWidget(right,0);
@@ -236,7 +237,7 @@ private:
 };
 
 StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
-    setObjectName("StreamStatsDock");setMinimumSize(310,200);
+    setObjectName("StreamStatsDock");setMinimumSize(275,200);
     setStyleSheet(R"(
       QWidget#StreamStatsDock{background:#080f18;color:#dbe7fa;font-family:'Segoe UI';font-size:10px;}
       QFrame#StatsCard{background:#0c1725;border:1px solid #29415a;border-radius:7px;}
@@ -302,7 +303,7 @@ void StatsDock::buildPages() {
 QWidget* StatsDock::buildHome() {
     auto* page=new QWidget;auto* outer=new QVBoxLayout(page);
     outer->setContentsMargins(8,8,8,3);outer->setSpacing(5);
-    auto* top=new QHBoxLayout;top->setContentsMargins(2,2,2,2);top->setSpacing(7);
+    auto* top=new QHBoxLayout;top->setContentsMargins(2,2,2,2);top->setSpacing(7);headerLayout_=top;
     top->addWidget(new StatsMark);
     auto* heading=new QLabel("Stream Stats");heading->setObjectName("DockTitle");top->addWidget(heading,1);
     for(int minutes:{1,5,15}){
@@ -446,9 +447,10 @@ void StatsDock::setLanguage(const QString& code){
 
 void StatsDock::arrangeCards(){
     if(!cards_||!home_)return;
+    const bool narrow=width()<320;
     const bool wide=width()>=680 && width()>height()*1.3;
     const bool roomy=wide&&width()>=1100&&height()>=600;
-    const int mode=roomy?2:wide?1:0;
+    const int mode=roomy?2:wide?1:narrow?3:0;
     if(layoutMode_==mode)return;
     layoutMode_=mode;
     horizontal_=wide;
@@ -468,7 +470,7 @@ void StatsDock::arrangeCards(){
     }
     const int chartHeight=roomy?155:wide?23:60;
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->setDisplayHeight(chartHeight);
-    const int columns=wide&&!roomy?1:2;
+    const int columns=((wide&&!roomy)||narrow)?1:2;
     const int metricHeight=roomy?47:wide?13:34;
     const int metricFont=roomy?14:10;
     for(auto* grid:metricGrids_){
@@ -506,14 +508,15 @@ void StatsDock::arrangeCards(){
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;")
             .arg(label->property("accent").toString()).arg(roomy?22:wide?12:15));
     if(auto* title=home_->findChild<QLabel*>("DockTitle"))
-        title->setStyleSheet("font-size:17px;font-weight:700;color:#e7fff4;");
+        title->setStyleSheet(QString("font-size:%1px;font-weight:700;color:#e7fff4;").arg(narrow?15:17));
+    if(headerLayout_)headerLayout_->setSpacing(narrow?4:7);
     if(auto* mark=home_->findChild<QWidget*>("StatsMark"))mark->setFixedSize(28,28);
     for(auto* mark:home_->findChildren<QWidget*>("SectionIcon"))
         mark->setFixedSize(roomy?28:18,roomy?28:18);
     if(auto* gear=home_->findChild<QPushButton*>("SettingsButton"))gear->setFixedSize(30,28);
     if(systemSelector_)systemSelector_->setFixedSize(roomy?120:wide?74:87,roomy?29:20);
     if(streamCount_)streamCount_->setStyleSheet(QString("color:#ffe184;background:#24301f;border:1px solid #70571b;border-radius:7px;font-size:%1px;font-weight:700;padding:1px 6px;").arg(roomy?14:10));
-    for(auto* button:rangeButtons_)button->setFixedSize(roomy?48:34,roomy?32:23);
+    for(auto* button:rangeButtons_)button->setFixedSize(roomy?48:narrow?28:34,roomy?32:23);
     for(auto* frame:{systemCard_,streamCard_,recordCard_}){
         auto* layout=static_cast<QVBoxLayout*>(frame->layout());
         layout->setContentsMargins(roomy?13:7,roomy?10:wide?4:5,roomy?13:7,roomy?10:wide?4:5);
