@@ -187,7 +187,7 @@ protected:
         for(int s=0;s<series_.size();++s){
             const auto& points=values[s];if(points.size()<2)continue;
             QVector<QPointF> nodes;
-            nodes.reserve(std::min(points.size(),int(inner.width())*4+4));
+            nodes.reserve(std::min(int(points.size()),std::max(0,int(inner.width()))*4+4));
             const auto position=[&](int i){
                 const qreal age=qreal(points.size()-1-i);
                 return QPointF(inner.right()-age*inner.width()/qreal(std::max(1,seconds_-1)),
