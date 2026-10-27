@@ -451,7 +451,7 @@ void StatsDock::arrangeCards(){
         for(auto* frame:{systemCard_,streamCard_,recordCard_})
             frame->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Maximum);
     }
-    const int chartHeight=roomy?155:wide?25:60;
+    const int chartHeight=roomy?155:wide?23:60;
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->setDisplayHeight(chartHeight);
     const int columns=wide&&!roomy?1:2;
     const int metricHeight=roomy?47:wide?13:34;
