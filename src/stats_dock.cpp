@@ -1,4 +1,5 @@
 #include "stats_dock.hpp"
+#include "version.hpp"
 #ifndef STREAM_STATS_PREVIEW
 #include <obs.h>
 #include <obs-module.h>
@@ -22,6 +23,7 @@
 #include <QLocale>
 #include <QLinearGradient>
 #include <algorithm>
+#include <cmath>
 
 namespace stats {
 namespace {
@@ -184,12 +186,29 @@ protected:
         p.save();p.setClipRect(inner.adjusted(-2,-2,2,2));
         for(int s=0;s<series_.size();++s){
             const auto& points=values[s];if(points.size()<2)continue;
-            QVector<QPointF> nodes;nodes.reserve(points.size());
-            for(int i=0;i<points.size();++i){
+            QVector<QPointF> nodes;
+            nodes.reserve(std::min(points.size(),int(inner.width())*4+4));
+            const auto position=[&](int i){
                 const qreal age=qreal(points.size()-1-i);
-                const qreal x=inner.right()-age*inner.width()/qreal(std::max(1,seconds_-1));
-                const qreal y=inner.bottom()-qreal(points[i]/maximum)*inner.height();
-                nodes.push_back(QPointF(x,y));
+                return QPointF(inner.right()-age*inner.width()/qreal(std::max(1,seconds_-1)),
+                    inner.bottom()-qreal(points[i]/maximum)*inner.height());
+            };
+            // Keep both extremes in each screen pixel. This removes redundant
+            // path segments without hiding brief CPU or bitrate spikes.
+            for(int first=0;first<points.size();){
+                const int column=int(std::floor(position(first).x()));
+                int last=first,low=first,high=first;
+                while(last+1<points.size()&&int(std::floor(position(last+1).x()))==column){
+                    ++last;
+                    if(points[last]<points[low])low=last;
+                    if(points[last]>points[high])high=last;
+                }
+                nodes.push_back(position(first));
+                if(low!=first&&low!=last&&low<high)nodes.push_back(position(low));
+                if(high!=first&&high!=last)nodes.push_back(position(high));
+                if(low!=first&&low!=last&&low>high)nodes.push_back(position(low));
+                if(last!=first)nodes.push_back(position(last));
+                first=last+1;
             }
             QPainterPath line(nodes.front());
             for(int i=1;i<nodes.size();++i)line.lineTo(nodes[i]);
@@ -368,7 +387,7 @@ QWidget* StatsDock::buildHome() {
     scroller->setWidget(host);outer->addWidget(scroller,1);
     auto* footerWidget=new QWidget;footerWidget->setObjectName("Footer");
     auto* footerLayout=new QVBoxLayout(footerWidget);footerLayout->setContentsMargins(0,0,0,0);footerLayout->setSpacing(0);
-    footer_=new QLabel("developed by <a href=\"https://www.youtube.com/channel/UCTAKYR3T2Ud8zZgNShgQfyw/\" style=\"color:#59dfff;text-decoration:none;\">OTMOPOZOK</a> · v1.0.0");
+    footer_=new QLabel("developed by <a href=\"https://www.youtube.com/channel/UCTAKYR3T2Ud8zZgNShgQfyw/\" style=\"color:#59dfff;text-decoration:none;\">OTMOPOZOK</a> · v" STREAM_STATS_VERSION);
     footer_->setObjectName("Credit");footer_->setTextFormat(Qt::RichText);
     footer_->setTextInteractionFlags(Qt::LinksAccessibleByMouse|Qt::LinksAccessibleByKeyboard);
     footer_->setOpenExternalLinks(true);footer_->setAlignment(Qt::AlignCenter);
