@@ -258,6 +258,7 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
       QPushButton#PeersToggle{color:#72e9f4;background:#0b1724;border:1px solid #263244;border-radius:5px;text-align:left;padding:0 7px;font-size:10px;}
       QPushButton#PeersToggle:hover{background:#142438;border-color:#38516d;}
       QWidget#PeersPanel{background:#0b1724;border:1px solid #263244;border-radius:6px;}
+      QWidget#PeerRow{background:#101e2b;border:1px solid #263244;border-radius:5px;}
       QLabel#PeerName{color:#dfe8ff;font-size:10px;font-weight:700;}
       QLabel#PeerTraffic,QLabel#PeersTotal{color:#72e9f4;font-size:10px;}
       QLabel#PeerStatus{font-size:10px;}
@@ -407,15 +408,17 @@ QWidget* StatsDock::buildHome() {
     auto* peersLayout=new QVBoxLayout(peersPanel_);peersLayout->setContentsMargins(7,5,7,5);peersLayout->setSpacing(3);
     const char* names[]={"Stream Chat","Stream Notify"};
     for(int i=0;i<2;++i){
-        auto* row=new QHBoxLayout;row->setSpacing(5);
-        auto* name=new QLabel(names[i]);name->setObjectName("PeerName");name->setMinimumWidth(78);
+        auto* peer=new QWidget;peer->setObjectName("PeerRow");
+        auto* peerLayout=new QVBoxLayout(peer);peerLayout->setContentsMargins(5,3,5,3);peerLayout->setSpacing(1);
+        auto* topLine=new QHBoxLayout;topLine->setSpacing(5);
+        auto* name=new QLabel(names[i]);name->setObjectName("PeerName");
         peerTraffic_[i]=new QLabel;peerTraffic_[i]->setObjectName("PeerTraffic");
-        peerTraffic_[i]->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+        peerTraffic_[i]->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
         peerStatus_[i]=new QLabel;peerStatus_[i]->setObjectName("PeerStatus");
         peerStatus_[i]->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
-        peerStatus_[i]->setMinimumWidth(54);
-        row->addWidget(name);row->addWidget(peerTraffic_[i],1);row->addWidget(peerStatus_[i]);
-        peersLayout->addLayout(row);
+        topLine->addWidget(name,1);topLine->addWidget(peerStatus_[i]);
+        peerLayout->addLayout(topLine);peerLayout->addWidget(peerTraffic_[i]);
+        peersLayout->addWidget(peer);
     }
     peersTotal_=new QLabel;peersTotal_->setObjectName("PeersTotal");
     peersTotal_->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
