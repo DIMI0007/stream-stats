@@ -503,7 +503,7 @@ QWidget* StatsDock::buildHome() {
     cpuPc_=addMetric(metricGrids_[0],phrase("CPU ПК","PC CPU"),MetricGlyph::Monitor,QColor("#07df91"));
     gpu_=addMetric(metricGrids_[0],phrase("GPU компьютера","Computer GPU"),MetricGlyph::Gpu,QColor("#b995ff"));
     ramObs_=addMetric(metricGrids_[0],phrase("RAM OBS","OBS RAM"),MetricGlyph::Memory,QColor("#72e9f4"));
-    ramFree_=addMetric(metricGrids_[0],phrase("Своб. RAM","Free RAM"),MetricGlyph::Memory,QColor("#8ab7ff"));
+    ramFree_=addMetric(metricGrids_[0],phrase("Доступно RAM","Available RAM"),MetricGlyph::Memory,QColor("#8ab7ff"));
     fps_=addMetric(metricGrids_[0],"FPS",MetricGlyph::Frames,QColor("#07df91"));
     render_=addMetric(metricGrids_[0],phrase("Рендер","Render"),MetricGlyph::Timer,QColor("#ffdc45"));
     renderDrop_=addMetric(metricGrids_[0],phrase("Пропуск ренд.","Render missed"),MetricGlyph::Frame,QColor("#ff8484"));
@@ -728,7 +728,8 @@ void StatsDock::arrangeCards(){
     const auto accentValue=[&](QLabel* label,const char* color){
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;").arg(color).arg(metricFont));
     };
-    for(auto* label:{cpuObs_,cpuPc_,gpu_,fps_})accentValue(label,"#07df91");
+    for(auto* label:{cpuObs_,cpuPc_,fps_})accentValue(label,"#07df91");
+    accentValue(gpu_,"#b995ff");
     accentValue(streamBitrate_,"#ffdc45");
     accentValue(recordBitrate_,"#72e9f4");
     for(auto* label:home_->findChildren<QLabel*>("CardTitle"))
