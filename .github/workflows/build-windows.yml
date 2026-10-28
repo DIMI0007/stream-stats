@@ -53,6 +53,6 @@ jobs:
           [ordered]@{product='Stream Stats';version=$spec.version;commit=$env:GITHUB_SHA;obs='33.0.0';qt='6.11.1';packageType='unsigned-test-build';dllSha256=(Get-FileHash $dll.FullName -Algorithm SHA256).Hash}|ConvertTo-Json|Set-Content package/BUILD_INFO.json -Encoding utf8
       - uses: actions/upload-artifact@v4
         with:
-          name: StreamStats-1.0.7-OBS33-Windows-x64
+          name: StreamStats-1.0.8-OBS33-Windows-x64
           path: package/
           if-no-files-found: error

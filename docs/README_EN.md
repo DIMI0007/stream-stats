@@ -7,6 +7,7 @@ System load, streaming and recording in one OBS panel. The layout works vertical
 ## Features
 
 - Computer and OBS CPU, computer GPU, memory, FPS and frame loss.
+- Colorful icons make each metric easier to spot in narrow, vertical and horizontal layouts.
 - Total streaming bitrate, data sent and active output count.
 - Recording speed, file size, duration and free disk space.
 - Charts covering 1, 5 or 15 minutes, with values under the pointer.
@@ -19,7 +20,7 @@ Stream Stats works on its own for system, streaming and recording statistics. If
 
 ## Install
 
-1. Close OBS. Download **StreamStats-1.0.7-OBS33-Windows-x64** from the [latest successful build](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) and extract the ZIP.
+1. Close OBS. Download **StreamStats-1.0.8-OBS33-Windows-x64** from the [latest successful build](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) and extract the ZIP.
 2. Open `C:\ProgramData\obs-studio\plugins\`. Replace the old `stream-stats` folder with the complete folder from the ZIP.
 3. Start OBS and open **Docks → Stream Stats**.
 
