@@ -22,7 +22,8 @@ int main(int argc,char** argv) {
     if(dock.findChildren<QLabel*>("Credit").size()!=1||
        dock.findChildren<QPushButton*>("PeersToggle").size()!=1||
        dock.findChildren<QWidget*>("PeersPanel").size()!=1||
-       dock.findChildren<QLabel*>("PeerTraffic").size()!=2||
+       dock.findChildren<QLabel*>("PeerTraffic").size()!=3||
+       dock.findChildren<QLabel*>("PeerResources").size()!=3||
        dock.findChildren<QLabel*>("OutputCount").size()!=1||
        dock.findChildren<QComboBox*>("SystemMetricSelector").size()!=1)return 5;
     auto* peersToggle=dock.findChild<QPushButton*>("PeersToggle");

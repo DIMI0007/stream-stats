@@ -61,7 +61,10 @@ private:
     QLabel* footer_=nullptr;
     QPushButton* peersToggle_=nullptr;
     QWidget* peersPanel_=nullptr;
-    QLabel *peerStatus_[2]{},*peerTraffic_[2]{},*peersTotal_=nullptr;
+    QLabel *peerStatus_[3]{},*peerTraffic_[3]{},*peerResources_[3]{},*peersTotal_=nullptr;
+    QElapsedTimer peerClock_;
+    quint64 peerCpuNs_[3]{};
+    bool peerCpuReady_[3]{};
     QList<QPushButton*> rangeButtons_;
     History cpuHistory_,obsCpuHistory_,gpuHistory_,fpsHistory_,streamHistory_,recordHistory_;
     Snapshot last_;

@@ -1,4 +1,4 @@
-# Установка Stream Stats 1.0.4
+# Установка Stream Stats 1.0.5
 
 1. Закройте OBS Studio 33.
 2. Удалите старую папку `stream-stats` из `C:\ProgramData\obs-studio\plugins\`.

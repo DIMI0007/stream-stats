@@ -24,6 +24,7 @@
 #include <QLocale>
 #include <QLinearGradient>
 #include <algorithm>
+#include <thread>
 #include <cmath>
 #include <QMouseEvent>
 #include <QToolTip>
@@ -32,9 +33,23 @@
 #include <QCheckBox>
 #include <QDateTime>
 #include <QFile>
+#include <atomic>
+#include <windows.h>
 
 namespace stats {
 namespace {
+std::atomic<quint64> selfCpuNs{0};
+quint64 currentThreadCpuNs(){
+    FILETIME created,ended,kernel,user;
+    if(!GetThreadTimes(GetCurrentThread(),&created,&ended,&kernel,&user))return 0;
+    ULARGE_INTEGER k,u;k.LowPart=kernel.dwLowDateTime;k.HighPart=kernel.dwHighDateTime;
+    u.LowPart=user.dwLowDateTime;u.HighPart=user.dwHighDateTime;
+    return (k.QuadPart+u.QuadPart)*100;
+}
+struct SelfCpuScope{
+    quint64 start=currentThreadCpuNs();
+    ~SelfCpuScope(){const auto end=currentThreadCpuNs();if(start&&end>=start)selfCpuNs.fetch_add(end-start,std::memory_order_relaxed);}
+};
 
 QString configFile() {
 #ifdef STREAM_STATS_PREVIEW
@@ -57,6 +72,7 @@ QString bytesText(quint64 bytes,const QLocale& locale) {
 QString peerBytes(quint64 bytes,const QLocale& locale) {
     if(bytes<1024)return locale.toString(bytes)+(locale.language()==QLocale::Russian?" Б":" B");
     if(bytes<1024*1024)return locale.toString(double(bytes)/1024.0,'f',1)+(locale.language()==QLocale::Russian?" КБ":" KB");
+    if(bytes>=1024ull*1024*1024)return locale.toString(double(bytes)/(1024.0*1024.0*1024.0),'f',2)+(locale.language()==QLocale::Russian?" ГБ":" GB");
     return locale.toString(double(bytes)/(1024.0*1024.0),'f',1)+(locale.language()==QLocale::Russian?" МБ":" MB");
 }
 QString duration(qint64 seconds) {
@@ -314,7 +330,7 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
     pages_=new QStackedWidget;root->addWidget(pages_);
     buildPages();
     tick_.setTimerType(Qt::CoarseTimer);
-    QObject::connect(&tick_,&QTimer::timeout,this,[this]{if(!closing_)updateSnapshot(collector_.sample());});
+    QObject::connect(&tick_,&QTimer::timeout,this,[this]{if(!closing_){SelfCpuScope cpu;updateSnapshot(collector_.sample());}});
     tick_.start(1000);
     updateSnapshot(collector_.sample());
 }
@@ -453,8 +469,8 @@ QWidget* StatsDock::buildHome() {
         "Chat and Notify traffic since OBS started. Connected means their local counters are reachable."));
     peersPanel_=new QWidget;peersPanel_->setObjectName("PeersPanel");
     auto* peersLayout=new QVBoxLayout(peersPanel_);peersLayout->setContentsMargins(7,5,7,5);peersLayout->setSpacing(3);
-    const char* names[]={"Stream Chat","Stream Notify"};
-    for(int i=0;i<2;++i){
+    const char* names[]={"Stream Chat","Stream Notify","Stream Stats"};
+    for(int i=0;i<3;++i){
         auto* peer=new QWidget;peer->setObjectName("PeerRow");
         auto* peerLayout=new QVBoxLayout(peer);peerLayout->setContentsMargins(5,3,5,3);peerLayout->setSpacing(1);
         auto* topLine=new QHBoxLayout;topLine->setSpacing(5);
@@ -463,7 +479,12 @@ QWidget* StatsDock::buildHome() {
         peerTraffic_[i]->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
         peerStatus_[i]=new QLabel;peerStatus_[i]->setObjectName("PeerStatus");
         peerStatus_[i]->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
-        topLine->addWidget(name,1);topLine->addWidget(peerStatus_[i]);
+        peerResources_[i]=new QLabel;peerResources_[i]->setObjectName("PeerResources");
+        peerResources_[i]->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+        peerResources_[i]->setStyleSheet("color:#8ea1c0;font-size:10px;");
+        peerResources_[i]->setToolTip(phrase("CPU — измеренные участки работы плагина; память — учтённые данные и буферы, не вся RAM процесса OBS.",
+            "CPU is measured plugin work; memory is tracked data and buffers, not the full OBS process RAM."));
+        topLine->addWidget(name,1);topLine->addWidget(peerResources_[i]);topLine->addWidget(peerStatus_[i]);
         peerLayout->addLayout(topLine);peerLayout->addWidget(peerTraffic_[i]);
         peersLayout->addWidget(peer);
     }
@@ -786,15 +807,28 @@ void StatsDock::updatePeers(){
     if(!peersTotal_)return;
     const QLocale locale=russian()?QLocale(QLocale::Russian):QLocale(QLocale::English);
     const PeerTraffic readings[]={
-        readPeerTraffic(L"stream-chat-obs.dll","stream_chat_telemetry_v1"),
-        readPeerTraffic(L"stream-notify.dll","stream_notify_telemetry_v1")};
+        readPeerTraffic(L"stream-chat-obs.dll","stream_chat_telemetry_v1","stream_chat_telemetry_v2"),
+        readPeerTraffic(L"stream-notify.dll","stream_notify_telemetry_v1","stream_notify_telemetry_v2"),
+        PeerTraffic{true,0,0,selfCpuNs.load(std::memory_order_relaxed),sizeof(*this),true,PeerState::Connected}};
+    const double elapsedNs=peerClock_.isValid()?double(peerClock_.nsecsElapsed()):0.0;
+    peerClock_.restart();
     quint64 sent=0,received=0;
-    for(int i=0;i<2;++i){
+    for(int i=0;i<3;++i){
         const auto& reading=readings[i];
         sent+=reading.sent;received+=reading.received;
-        peerTraffic_[i]->setText(QString::fromUtf8("↑ ")+peerBytes(reading.sent,locale)+
+        peerTraffic_[i]->setText(i==2?phrase("Фоновых сетевых запросов нет","No background network requests"):
+            QString::fromUtf8("↑ ")+peerBytes(reading.sent,locale)+
             QString::fromUtf8("  ↓ ")+peerBytes(reading.received,locale));
-        peerStatus_[i]->setText(reading.connected?phrase("● Связь","● Linked"):
+        QString cpu="—";
+        if(reading.hasResources&&peerCpuReady_[i]&&elapsedNs>0&&elapsedNs<10e9&&reading.cpuNs>=peerCpuNs_[i]){
+            const double cores=std::max(1u,std::thread::hardware_concurrency());
+            const double percent=100.0*double(reading.cpuNs-peerCpuNs_[i])/elapsedNs/cores;
+            cpu=percent<0.01?phrase("<0,01 %","<0.01 %"):locale.toString(percent,'f',2)+" %";
+        }
+        peerResources_[i]->setText(reading.hasResources?
+            "CPU "+cpu+QString::fromUtf8(" · ")+phrase("данные ","data ")+peerBytes(reading.dataBytes,locale):QString());
+        peerCpuNs_[i]=reading.cpuNs;peerCpuReady_[i]=reading.hasResources;
+        peerStatus_[i]->setText(i==2?phrase("● Здесь","● Here"):reading.connected?phrase("● Связь","● Linked"):
             reading.state==PeerState::Unsupported?phrase("● Нужна новая версия","● Update needed"):
             reading.state==PeerState::NoResponse?phrase("● Нет ответа","● No response"):phrase("● Не загружен","● Not loaded"));
         peerStatus_[i]->setToolTip(reading.state==PeerState::NotLoaded?phrase("Плагин выключен, не установлен или не смог загрузиться в OBS.","Plugin is disabled, not installed or failed to load in OBS."):
