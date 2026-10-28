@@ -27,4 +27,4 @@
 
 Для **OBS Studio 33 на Windows x64**. Сборка пока не подписана. Примеры на скриншотах созданы в тестовой среде; работа с реальными устройствами проверяется в OBS.
 
-[Общий стиль трёх плагинов](docs/VISUAL_STYLE_RU.md) · [Разработчик OTMOPOZOK](https://www.youtube.com/channel/UCTAKYR3T2Ud8zZgNShgQfyw/)
+[Общий стиль трёх плагинов](docs/VISUAL_STYLE_RU.md) · [Лицензия GPL v2 или новее](LICENSE_NOTICE.md) · [Разработчик OTMOPOZOK](https://www.youtube.com/channel/UCTAKYR3T2Ud8zZgNShgQfyw/)
