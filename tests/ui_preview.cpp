@@ -40,7 +40,7 @@ int main(int argc,char** argv) {
         dock.resize(width,height);dock.show();app.processEvents(QEventLoop::AllEvents,200);
         for(auto* button:dock.findChildren<QPushButton*>()){
             if(button->property("HistoryRange").toBool()&&button->height()!=gear->height()){
-                std::fprintf(stderr,"History button height differs from settings button\n");return false;
+                std::fprintf(stderr,"History button height %d differs from settings button %d\n",button->height(),gear->height());return false;
             }
         }
         std::fprintf(stderr,"Capture %s laid out\n",file);std::fflush(stderr);

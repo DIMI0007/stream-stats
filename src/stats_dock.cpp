@@ -746,7 +746,7 @@ void StatsDock::arrangeCards(){
     if(streamCount_)streamCount_->setStyleSheet(QString("color:#ffe184;background:#24301f;border:1px solid #70571b;border-radius:7px;font-size:%1px;font-weight:700;padding:1px 6px;").arg(roomy?14:10));
     for(auto* button:rangeButtons_){
         button->setFixedSize(compactHeader?28:34,22);
-        button->setStyleSheet("min-height:0px;padding:0 1px;");
+        button->setStyleSheet("min-height:20px;max-height:20px;padding:0 1px;");
     }
     for(auto* frame:{systemCard_,streamCard_,recordCard_}){
         auto* layout=static_cast<QVBoxLayout*>(frame->layout());
