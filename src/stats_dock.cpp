@@ -403,7 +403,6 @@ QWidget* StatsDock::buildHome() {
     peersToggle_->setFixedHeight(16);
     peersToggle_->setToolTip(phrase("Трафик Chat и Notify за текущий запуск OBS. Связь означает доступность их локальных счётчиков.",
         "Chat and Notify traffic since OBS started. Connected means their local counters are reachable."));
-    outer->addWidget(peersToggle_);
     peersPanel_=new QWidget;peersPanel_->setObjectName("PeersPanel");
     auto* peersLayout=new QVBoxLayout(peersPanel_);peersLayout->setContentsMargins(7,5,7,5);peersLayout->setSpacing(3);
     const char* names[]={"Stream Chat","Stream Notify"};
@@ -421,7 +420,7 @@ QWidget* StatsDock::buildHome() {
     peersTotal_=new QLabel;peersTotal_->setObjectName("PeersTotal");
     peersTotal_->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
     peersLayout->addWidget(peersTotal_);
-    peersPanel_->hide();outer->addWidget(peersPanel_);
+    peersPanel_->hide();
     QObject::connect(peersToggle_,&QPushButton::toggled,this,[this](bool open){
         peersPanel_->setVisible(open);
         peersToggle_->setText(open?phrase("▾ Наши плагины","▾ Our plugins"):
@@ -430,6 +429,8 @@ QWidget* StatsDock::buildHome() {
     });
     auto* footerWidget=new QWidget;footerWidget->setObjectName("Footer");
     auto* footerLayout=new QVBoxLayout(footerWidget);footerLayout->setContentsMargins(0,0,0,0);footerLayout->setSpacing(0);
+    footerLayout->addWidget(peersToggle_);
+    footerLayout->addWidget(peersPanel_);
     footer_=new QLabel("developed by <a href=\"https://www.youtube.com/channel/UCTAKYR3T2Ud8zZgNShgQfyw/\" style=\"color:#59dfff;text-decoration:none;\">OTMOPOZOK</a> · v" STREAM_STATS_VERSION);
     footer_->setObjectName("Credit");footer_->setTextFormat(Qt::RichText);
     footer_->setTextInteractionFlags(Qt::LinksAccessibleByMouse|Qt::LinksAccessibleByKeyboard);
