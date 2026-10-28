@@ -705,7 +705,6 @@ void StatsDock::arrangeCards(){
             auto* rowLayout=static_cast<QHBoxLayout*>(row->layout());
             rowLayout->setContentsMargins(columns==2?6:0,0,columns==2?6:0,0);
             rowLayout->setSpacing(wide&&!roomy?3:4);
-            rowLayout->setAlignment(Qt::AlignVCenter);
             if(columns==2&&i==rows.size()-1&&rows.size()%2)
                 grid->addWidget(row,i/columns,0,1,2);
             else grid->addWidget(row,i/columns,i%columns);
