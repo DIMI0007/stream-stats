@@ -20,7 +20,7 @@ Stream Stats works on its own for system, streaming and recording statistics. If
 
 ## Install
 
-1. Close OBS. Download **StreamStats-1.1.0-OBS33-Windows-x64** from the [latest successful build](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) and extract the ZIP.
+1. Close OBS. Download **StreamStats-1.1.1-OBS33-Windows-x64** from the [latest successful build](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) and extract the ZIP.
 2. Open `C:\ProgramData\obs-studio\plugins\`. Replace the old `stream-stats` folder with the complete folder from the ZIP.
 3. Start OBS and open **Docks → Stream Stats**.
 
