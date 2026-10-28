@@ -32,13 +32,13 @@ Stream Stats работает самостоятельно и показывае
 
 ## Как установить
 
-1. Полностью закройте OBS. Скачайте **StreamStats-1.0.8-OBS33-Windows-x64** на странице [последней успешной сборки](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) и распакуйте ZIP.
+1. Полностью закройте OBS. Скачайте **StreamStats-1.0.8-OBS33-Windows-x64.zip** на [странице выпуска 1.0.8](https://github.com/DIMI0007/stream-stats/releases/tag/v1.0.8) и распакуйте ZIP.
 2. Откройте `C:\ProgramData\obs-studio\plugins\`. Удалите старую папку `stream-stats`, если она есть. Скопируйте сюда папку `stream-stats` из ZIP целиком.
 3. Запустите OBS и откройте **Док-панели → Stream Stats**.
 
 Файл `stream-stats.dll` должен лежать прямо в папке `stream-stats`. [Подробная инструкция](INSTALL_RU.md).
 
-Для **OBS Studio 33 на Windows x64**. Сборка пока не подписана. Примеры на скриншотах созданы в тестовой среде; работа с реальными устройствами проверяется в OBS.
+Для **OBS Studio 33 на Windows x64**. Сборка пока не подписана. На компьютерах со включённым Smart App Control Windows может заблокировать новую DLL; снятие отметки «Разблокировать» не всегда помогает. Для таких компьютеров потребуется выпуск с доверенной цифровой подписью. Примеры на скриншотах созданы в тестовой среде; работа с реальными устройствами проверяется в OBS.
 
 [Общий стиль трёх плагинов](docs/VISUAL_STYLE_RU.md) · [Лицензия GPL v2 или новее](LICENSE_NOTICE.md) · [Разработчик OTMOPOZOK](https://www.youtube.com/channel/UCTAKYR3T2Ud8zZgNShgQfyw/)
 
