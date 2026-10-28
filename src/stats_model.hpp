@@ -25,6 +25,21 @@ private:
     double seconds_=0;
 };
 
+class LossWindow {
+public:
+    bool update(bool active,quint64 lost,quint64 total,double seconds){
+        if(!active||!std::isfinite(seconds)||seconds<=0||seconds>5){values_.clear();return false;}
+        values_.push_back({lost,total,seconds});
+        double covered=0;for(const auto& value:values_)covered+=value.seconds;
+        while(values_.size()>1&&covered-values_.front().seconds>=10){covered-=values_.front().seconds;values_.removeFirst();}
+        quint64 dropped=0,frames=0;for(const auto& value:values_){dropped+=value.lost;frames+=value.total;}
+        return covered>=10&&frames>0&&double(dropped)/double(frames)>0.01;
+    }
+private:
+    struct Sample{quint64 lost,total;double seconds;};
+    QVector<Sample> values_;
+};
+
 struct OutputReading {
     quintptr identity = 0;
     bool active = false;

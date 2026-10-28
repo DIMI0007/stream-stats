@@ -35,5 +35,10 @@ int main() {
     if(!problem.update(true,1,10))return 9;
     if(problem.update(false,1,10)||problem.update(true,60,10))return 10;
     std::puts("Sustained warning thresholds, recovery and long sampling gaps passed");
+    stats::LossWindow window;
+    for(int i=0;i<9;++i)if(window.update(true,i%2?0:2,60,1))return 11;
+    if(!window.update(true,0,60,1))return 12;
+    for(int i=0;i<10;++i)window.update(true,0,60,1);
+    if(window.update(true,0,60,1)||window.update(false,60,60,1)||window.update(true,60,60,60))return 13;
     return 0;
 }

@@ -276,6 +276,8 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
     setObjectName("StreamStatsDock");setMinimumSize(275,200);
     setStyleSheet(R"(
       QWidget#StreamStatsDock{background:#080f18;color:#dfe8ff;font-family:'Segoe UI';font-size:10px;}
+      QLabel,QCheckBox{color:#dfe8ff;background:transparent;}
+      QWidget#SummaryContent{background:#080f18;}
       QFrame#StatsCard{background:qlineargradient(x1:0,y1:0,x2:1,y2:1,stop:0 #101925,stop:1 #0b131e);border:1px solid #263244;border-radius:8px;}
       QLabel#CardTitle{font-size:12px;font-weight:700;}
       QLabel#MetricName{color:#8ea1c0;font-size:10px;}
@@ -511,7 +513,7 @@ QWidget* StatsDock::buildSettings() {
         "Charts update once per second. History stays in OBS memory and clears when OBS exits."));
     hint->setWordWrap(true);hint->setObjectName("MetricName");outer->addWidget(hint);
     auto* warnings=new QCheckBox(phrase("Предупреждения о кадрах и диске","Frame loss and disk warnings"));
-    warnings->setChecked(warningsEnabled_);warnings->setToolTip(phrase("Кадры: потери выше 1% в течение 10 секунд. Диск: меньше 5 ГБ или 15 минут записи в течение 30 секунд.","Frames: over 1% loss for 10 seconds. Disk: under 5 GB or 15 minutes remaining for 30 seconds."));
+    warnings->setChecked(warningsEnabled_);warnings->setToolTip(phrase("Кадры: потери выше 1% за последние 10 секунд. Диск: меньше 5 ГБ или 15 минут записи в течение 30 секунд.","Frames: over 1% loss in the last 10 seconds. Disk: under 5 GB or 15 minutes remaining for 30 seconds."));
     QObject::connect(warnings,&QCheckBox::toggled,this,[this](bool on){warningsEnabled_=on;QSettings saved(configFile(),QSettings::IniFormat);saved.setValue("warningsEnabled",on);if(!on&&warningLabel_)warningLabel_->hide();});outer->addWidget(warnings);
     auto* summary=new QPushButton(phrase("Сводка текущего сеанса","Current session summary"));summary->setObjectName("SessionSummaryButton");
     QObject::connect(summary,&QPushButton::clicked,this,[this]{showSummary();});outer->addWidget(summary);
@@ -539,10 +541,12 @@ void StatsDock::setLanguage(const QString& code){
 void StatsDock::arrangeCards(){
     if(!cards_||!home_)return;
     const bool narrow=width()<300;
+    const bool compactHeader=width()<340;
     const bool wide=width()>=680 && width()>height()*1.3;
     const bool roomy=wide&&width()>=1100&&height()>=600;
     const int mode=roomy?2:wide?1:narrow?3:0;
-    if(layoutMode_==mode)return;
+    if(layoutMode_==mode&&compactHeader_==int(compactHeader))return;
+    compactHeader_=int(compactHeader);
     layoutMode_=mode;
     horizontal_=wide;
     for(auto* widget:{systemCard_,streamCard_,recordCard_})cards_->removeWidget(widget);
@@ -599,8 +603,8 @@ void StatsDock::arrangeCards(){
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;")
             .arg(label->property("accent").toString()).arg(roomy?22:wide?12:15));
     if(auto* title=home_->findChild<QLabel*>("DockTitle"))
-        title->setStyleSheet(QString("font-size:%1px;font-weight:700;color:#e7fff4;").arg(narrow?15:17));
-    if(headerLayout_)headerLayout_->setSpacing(narrow?4:7);
+        title->setStyleSheet(QString("font-size:%1px;font-weight:700;color:#e7fff4;").arg(compactHeader?15:17));
+    if(headerLayout_)headerLayout_->setSpacing(compactHeader?4:7);
     if(auto* mark=home_->findChild<QWidget*>("StatsMark"))mark->setFixedSize(28,28);
     for(auto* mark:home_->findChildren<QWidget*>("SectionIcon"))
         mark->setFixedSize(roomy?28:18,roomy?28:18);
@@ -608,8 +612,8 @@ void StatsDock::arrangeCards(){
     if(systemSelector_)systemSelector_->setFixedSize(roomy?120:wide?74:87,roomy?29:20);
     if(streamCount_)streamCount_->setStyleSheet(QString("color:#ffe184;background:#24301f;border:1px solid #70571b;border-radius:7px;font-size:%1px;font-weight:700;padding:1px 6px;").arg(roomy?14:10));
     for(auto* button:rangeButtons_){
-        button->setFixedSize(roomy?48:narrow?28:34,roomy?32:23);
-        button->setStyleSheet(narrow?"padding:0 1px;":QString());
+        button->setFixedSize(roomy?48:compactHeader?28:34,roomy?32:23);
+        button->setStyleSheet(compactHeader?"padding:0 1px;":QString());
     }
     for(auto* frame:{systemCard_,streamCard_,recordCard_}){
         auto* layout=static_cast<QVBoxLayout*>(frame->layout());
@@ -731,12 +735,11 @@ void StatsDock::updateHealth(const Snapshot& value,double seconds){
         recordedBytes_+=previousHealth_.record.active&&value.record.fileBytes>=previousRecordedBytes_?value.record.fileBytes-previousRecordedBytes_:value.record.fileBytes;
         previousRecordedBytes_=value.record.fileBytes;
     }else previousRecordedBytes_=0;
-    const auto loss=[](quint64 lost,quint64 frames){return frames>0&&double(lost)/frames>0.01;};
     QStringList problems;
     const double elapsed=timed?seconds:0;
-    if(networkProblem_.update(value.stream.active&&loss(netLost,netFrames),elapsed,10))problems<<phrase("Устойчивые сетевые потери","Sustained network frame loss");
-    if(renderProblem_.update(loss(renderLost,renderFrames),elapsed,10))problems<<phrase("OBS не успевает рисовать кадры","OBS cannot render frames in time");
-    if(encodeProblem_.update(value.record.active||value.stream.active?loss(encodeLost,encodeFrames):false,elapsed,10))problems<<phrase("Кодировщик пропускает кадры","Encoder is skipping frames");
+    if(networkLoss_.update(value.stream.active,netLost,netFrames,elapsed))problems<<phrase("Сетевые потери выше 1% за 10 с","Network frame loss over 1% in 10 sec");
+    if(renderLoss_.update(true,renderLost,renderFrames,elapsed))problems<<phrase("OBS не успевает рисовать кадры","OBS cannot render frames in time");
+    if(encodeLoss_.update(value.record.active||value.stream.active,encodeLost,encodeFrames,elapsed))problems<<phrase("Кодировщик пропускает кадры","Encoder is skipping frames");
     const bool diskLow=value.record.active&&value.record.diskAvailable&&(value.record.freeBytes<5ull*1024*1024*1024||(value.record.secondsUntilFull>=0&&value.record.secondsUntilFull<900));
     if(diskProblem_.update(diskLow,elapsed,30))problems<<phrase("Мало места для записи","Recording disk is running low");
     if(warningLabel_){warningLabel_->setText(problems.join(" · "));warningLabel_->setVisible(warningsEnabled_&&!problems.isEmpty());}
@@ -748,7 +751,7 @@ QString StatsDock::summaryText()const{
     return phrase("Обновлено: ","Updated: ")+QDateTime::currentDateTime().toString("dd.MM.yyyy HH:mm:ss")+"\n"+
         phrase("Работа OBS под наблюдением: ","Observed OBS session: ")+duration(sessionClock_.isValid()?sessionClock_.elapsed()/1000:0)+"\n"+
         phrase("Средняя CPU OBS: ","Average OBS CPU: ")+(observedSeconds_>0?locale.toString(cpuSum_/observedSeconds_,'f',1)+" %":"—")+"\n"+
-        phrase("Максимум GPU компьютера: ","Peak PC GPU: ")+locale.toString(gpuPeak_,'f',1)+" %\n"+
+        phrase("Максимум GPU компьютера: ","Peak PC GPU: ")+(gpuPeak_>=0?locale.toString(gpuPeak_,'f',1)+" %":"—")+"\n"+
         phrase("Передано видеоданных: ","Stream video sent: ")+(last_.stream.incomplete?QString::fromUtf8("≥ "):QString())+bytesText(last_.stream.totalBytes,locale)+"\n"+
         phrase("Сетевые потери кадров: ","Network frames lost: ")+locale.toString(sessionNetworkDropped_)+"\n"+
         phrase("Пропуски рендера: ","Render frames missed: ")+locale.toString(sessionRenderMissed_)+"\n"+
@@ -761,7 +764,8 @@ void StatsDock::showSummary(){
     if(summaryPage_){pages_->removeWidget(summaryPage_);summaryPage_->deleteLater();}
     summaryPage_=new QWidget;auto* outer=new QVBoxLayout(summaryPage_);outer->setContentsMargins(8,8,8,8);
     auto* back=new QPushButton(phrase("← Назад","← Back"));QObject::connect(back,&QPushButton::clicked,this,[this]{pages_->setCurrentWidget(settings_);});outer->addWidget(back);
-    auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);auto* content=new QWidget;auto* rows=new QVBoxLayout(content);
+    auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);scroll->viewport()->setStyleSheet("background:#080f18;");
+    auto* content=new QWidget;content->setObjectName("SummaryContent");auto* rows=new QVBoxLayout(content);
     auto* title=new QLabel(phrase("Сводка текущего сеанса","Current session summary"));title->setObjectName("DockTitle");rows->addWidget(title);
     auto* text=new QLabel(summaryText());text->setObjectName("SessionSummaryText");text->setWordWrap(true);text->setTextFormat(Qt::PlainText);rows->addWidget(text);
     auto* exportButton=new QPushButton(phrase("Сохранить CSV","Save CSV"));QObject::connect(exportButton,&QPushButton::clicked,this,[this]{exportSummary();});rows->addWidget(exportButton);
