@@ -15,7 +15,7 @@ System load, streaming and recording in one OBS panel. The layout works vertical
 
 ## Install
 
-1. Close OBS. Download **StreamStats-1.0.5-OBS33-Windows-x64** from the [latest successful build](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) and extract the ZIP.
+1. Close OBS. Download **StreamStats-1.0.6-OBS33-Windows-x64** from the [latest successful build](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) and extract the ZIP.
 2. Open `C:\ProgramData\obs-studio\plugins\`. Replace the old `stream-stats` folder with the complete folder from the ZIP.
 3. Start OBS and open **Docks → Stream Stats**.
 

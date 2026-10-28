@@ -31,6 +31,7 @@
 #include <QFileDialog>
 #include <QSaveFile>
 #include <QCheckBox>
+#include <QSignalBlocker>
 #include <QDateTime>
 #include <QFile>
 #include <atomic>
@@ -650,7 +651,12 @@ void StatsDock::updateSnapshot(const Snapshot& value,bool collect){
         const double seconds=sampleClock_.isValid()?sampleClock_.restart()/1000.0:0;
         updateHealth(value,seconds);
     }
+    const bool recordingEnded=last_.record.active&&!value.record.active;
     last_=value;
+    if(recordingEnded){
+        recordExpanded_=false;
+        if(recordDetails_){const QSignalBlocker blocked(recordDetails_);recordDetails_->setChecked(false);}
+    }
     if(collect){
     cpuHistory_.add(std::max(0.0,value.system.cpuPc));
     obsCpuHistory_.add(std::max(0.0,value.system.cpuObs));
