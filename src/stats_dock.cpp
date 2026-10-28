@@ -1,4 +1,5 @@
 #include "stats_dock.hpp"
+#include "plugin_telemetry.hpp"
 #include "version.hpp"
 #ifndef STREAM_STATS_PREVIEW
 #include <obs.h>
@@ -45,6 +46,11 @@ QString bytesText(quint64 bytes,const QLocale& locale) {
     if(value>=1024.0*1024*1024)return locale.toString(value/(1024.0*1024*1024),'f',1)+" GB";
     if(value>=1024.0*1024)return locale.toString(value/(1024.0*1024),'f',0)+" MB";
     return locale.toString(value/1024.0,'f',0)+" KB";
+}
+QString peerBytes(quint64 bytes,const QLocale& locale) {
+    if(bytes<1024)return locale.toString(bytes)+(locale.language()==QLocale::Russian?" Б":" B");
+    if(bytes<1024*1024)return locale.toString(double(bytes)/1024.0,'f',1)+(locale.language()==QLocale::Russian?" КБ":" KB");
+    return locale.toString(double(bytes)/(1024.0*1024.0),'f',1)+(locale.language()==QLocale::Russian?" МБ":" MB");
 }
 QString duration(qint64 seconds) {
     if(seconds<0)return "—";
@@ -249,6 +255,12 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
       QWidget#Footer{background:#080f18;}
       QLabel#Credit{color:#9299a5;background:#080f18;font-size:11px;}
       QLabel#SessionTrafficFooter{color:#72e9f4;background:#080f18;font-size:10px;}
+      QPushButton#PeersToggle{color:#72e9f4;background:#0b1724;border:1px solid #263244;border-radius:5px;text-align:left;padding:0 7px;font-size:10px;}
+      QPushButton#PeersToggle:hover{background:#142438;border-color:#38516d;}
+      QWidget#PeersPanel{background:#0b1724;border:1px solid #263244;border-radius:6px;}
+      QLabel#PeerName{color:#dfe8ff;font-size:10px;font-weight:700;}
+      QLabel#PeerTraffic,QLabel#PeersTotal{color:#72e9f4;font-size:10px;}
+      QLabel#PeerStatus{font-size:10px;}
       QComboBox#SystemMetricSelector{color:#e7eeff;background:#0c1420;border:1px solid #344865;border-radius:6px;padding:1px 5px;font-size:10px;}
       QComboBox#SystemMetricSelector QAbstractItemView{background:#101a2b;color:#e7eeff;selection-background-color:#26344d;}
       QPushButton{color:#e1ebff;background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #202a3b,stop:1 #141d2b);border:1px solid #39465d;border-radius:6px;padding:2px 6px;}
@@ -386,6 +398,36 @@ QWidget* StatsDock::buildHome() {
     recordChart_->setToolTip(phrase("Фактический битрейт записи","Actual recording bitrate"));
     body->addWidget(recordChart_);
     scroller->setWidget(host);outer->addWidget(scroller,1);
+    peersToggle_=new QPushButton(phrase("▸ Наши плагины","▸ Our plugins"));
+    peersToggle_->setObjectName("PeersToggle");peersToggle_->setCheckable(true);
+    peersToggle_->setFixedHeight(16);
+    peersToggle_->setToolTip(phrase("Трафик Chat и Notify за текущий запуск OBS. Связь означает доступность их локальных счётчиков.",
+        "Chat and Notify traffic since OBS started. Connected means their local counters are reachable."));
+    outer->addWidget(peersToggle_);
+    peersPanel_=new QWidget;peersPanel_->setObjectName("PeersPanel");
+    auto* peersLayout=new QVBoxLayout(peersPanel_);peersLayout->setContentsMargins(7,5,7,5);peersLayout->setSpacing(3);
+    const char* names[]={"Stream Chat","Stream Notify"};
+    for(int i=0;i<2;++i){
+        auto* row=new QHBoxLayout;row->setSpacing(5);
+        auto* name=new QLabel(names[i]);name->setObjectName("PeerName");name->setMinimumWidth(78);
+        peerTraffic_[i]=new QLabel;peerTraffic_[i]->setObjectName("PeerTraffic");
+        peerTraffic_[i]->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+        peerStatus_[i]=new QLabel;peerStatus_[i]->setObjectName("PeerStatus");
+        peerStatus_[i]->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+        peerStatus_[i]->setMinimumWidth(54);
+        row->addWidget(name);row->addWidget(peerTraffic_[i],1);row->addWidget(peerStatus_[i]);
+        peersLayout->addLayout(row);
+    }
+    peersTotal_=new QLabel;peersTotal_->setObjectName("PeersTotal");
+    peersTotal_->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
+    peersLayout->addWidget(peersTotal_);
+    peersPanel_->hide();outer->addWidget(peersPanel_);
+    QObject::connect(peersToggle_,&QPushButton::toggled,this,[this](bool open){
+        peersPanel_->setVisible(open);
+        peersToggle_->setText(open?phrase("▾ Наши плагины","▾ Our plugins"):
+            phrase("▸ Наши плагины","▸ Our plugins"));
+        if(open)updatePeers();
+    });
     auto* footerWidget=new QWidget;footerWidget->setObjectName("Footer");
     auto* footerLayout=new QVBoxLayout(footerWidget);footerLayout->setContentsMargins(0,0,0,0);footerLayout->setSpacing(0);
     footer_=new QLabel("developed by <a href=\"https://www.youtube.com/channel/UCTAKYR3T2Ud8zZgNShgQfyw/\" style=\"color:#59dfff;text-decoration:none;\">OTMOPOZOK</a> · v" STREAM_STATS_VERSION);
@@ -393,12 +435,7 @@ QWidget* StatsDock::buildHome() {
     footer_->setTextInteractionFlags(Qt::LinksAccessibleByMouse|Qt::LinksAccessibleByKeyboard);
     footer_->setOpenExternalLinks(true);footer_->setAlignment(Qt::AlignCenter);
     footer_->setFixedHeight(20);footerLayout->addWidget(footer_);
-    trafficFooter_=new QLabel(phrase("Трафик за сеанс · ↑ 0 Б  |  ↓ 0 Б","Session traffic · ↑ 0 B  |  ↓ 0 B"));
-    trafficFooter_->setObjectName("SessionTrafficFooter");trafficFooter_->setAlignment(Qt::AlignCenter);
-    trafficFooter_->setFixedHeight(16);
-    trafficFooter_->setToolTip(phrase("Этот плагин не отправляет сетевые запросы; трафик видеопотоков показан в блоке трансляции.",
-        "This plugin makes no network requests; video traffic is shown in the stream block."));
-    footerLayout->addWidget(trafficFooter_);outer->addWidget(footerWidget);
+    outer->addWidget(footerWidget);
     setRange(rangeMinutes_);
     return page;
 }
@@ -601,6 +638,26 @@ void StatsDock::updateSnapshot(const Snapshot& value){
         phrase("Нет записи","No recording"):value.record.paused?
         phrase("Запись на паузе","Recording paused"):QString());
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->update();
+    if(peersPanel_&&peersPanel_->isVisible())updatePeers();
+}
+
+void StatsDock::updatePeers(){
+    if(!peersTotal_)return;
+    const QLocale locale=russian()?QLocale(QLocale::Russian):QLocale(QLocale::English);
+    const PeerTraffic readings[]={
+        readPeerTraffic(L"stream-chat-obs.dll","stream_chat_telemetry_v1"),
+        readPeerTraffic(L"stream-notify.dll","stream_notify_telemetry_v1")};
+    quint64 sent=0,received=0;
+    for(int i=0;i<2;++i){
+        const auto& reading=readings[i];
+        sent+=reading.sent;received+=reading.received;
+        peerTraffic_[i]->setText(QString::fromUtf8("↑ ")+peerBytes(reading.sent,locale)+
+            QString::fromUtf8("  ↓ ")+peerBytes(reading.received,locale));
+        peerStatus_[i]->setText(reading.connected?phrase("● Связь","● Linked"):phrase("● Нет связи","● Offline"));
+        peerStatus_[i]->setStyleSheet(QString("color:%1;font-size:10px;").arg(reading.connected?"#07df91":"#8ea1c0"));
+    }
+    peersTotal_->setText(phrase("Всего","Total")+QString::fromUtf8("  ↑ ")+peerBytes(sent,locale)+
+        QString::fromUtf8("  ↓ ")+peerBytes(received,locale));
 }
 
 } // namespace stats

@@ -19,7 +19,7 @@ configure_file(src/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/generated/version
 
 add_library(${CMAKE_PROJECT_NAME} MODULE
   src/plugin.cpp src/stats_dock.cpp src/stats_collector.cpp
-  src/stats_dock.hpp src/stats_collector.hpp src/stats_model.hpp)
+  src/stats_dock.hpp src/stats_collector.hpp src/stats_model.hpp src/plugin_telemetry.hpp)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
   OBS::libobs OBS::obs-frontend-api Qt6::Core Qt6::Gui Qt6::Widgets psapi pdh)
@@ -40,7 +40,7 @@ set_tests_properties(stream-aggregation-and-history PROPERTIES
 
 add_executable(stream-stats-ui-preview tests/ui_preview.cpp src/stats_dock.cpp src/stats_collector.cpp)
 target_include_directories(stream-stats-ui-preview PRIVATE src "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_compile_definitions(stream-stats-ui-preview PRIVATE STREAM_STATS_PREVIEW QT_NO_KEYWORDS)
+target_compile_definitions(stream-stats-ui-preview PRIVATE STREAM_STATS_PREVIEW QT_NO_KEYWORDS WIN32_LEAN_AND_MEAN NOMINMAX)
 target_link_libraries(stream-stats-ui-preview PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets)
 if(MSVC)
   target_compile_options(stream-stats-ui-preview PRIVATE /W4 /utf-8 /permissive-)

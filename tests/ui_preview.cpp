@@ -20,9 +20,14 @@ int main(int argc,char** argv) {
     std::fprintf(stderr,"Preview panel constructed\n");std::fflush(stderr);
     dock.previewSamples(75);
     if(dock.findChildren<QLabel*>("Credit").size()!=1||
-       dock.findChildren<QLabel*>("SessionTrafficFooter").size()!=1||
+       dock.findChildren<QPushButton*>("PeersToggle").size()!=1||
+       dock.findChildren<QWidget*>("PeersPanel").size()!=1||
+       dock.findChildren<QLabel*>("PeerTraffic").size()!=2||
        dock.findChildren<QLabel*>("OutputCount").size()!=1||
        dock.findChildren<QComboBox*>("SystemMetricSelector").size()!=1)return 5;
+    auto* peersToggle=dock.findChild<QPushButton*>("PeersToggle");
+    auto* peersPanel=dock.findChild<QWidget*>("PeersPanel");
+    if(!peersToggle||!peersPanel||peersToggle->isChecked()||!peersPanel->isHidden())return 8;
     auto* logo=dock.findChild<QWidget*>("StatsMark");
     auto* gear=dock.findChild<QPushButton*>("SettingsButton");
     if(!logo||logo->size()!=QSize(28,28)||!gear||gear->size()!=QSize(30,28)||
@@ -52,6 +57,9 @@ int main(int argc,char** argv) {
     if(!capture("compact-720x260.png",720,260,true))return 1;
     if(!capture("horizontal-1600x900.png",1600,900,true))return 2;
     if(!capture("vertical-360x900.png",360,900,true))return 3;
+    peersToggle->click();app.processEvents(QEventLoop::AllEvents,200);
+    if(!peersPanel->isVisible()||!capture("plugins-expanded-360x900.png",360,900,false))return 9;
+    peersToggle->click();app.processEvents(QEventLoop::AllEvents,200);
     if(!capture("narrow-280x900.png",280,900,false))return 7;
     dock.previewOffline();
     if(!capture("vertical-offline-310x900.png",310,900,true))return 4;

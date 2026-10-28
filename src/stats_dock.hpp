@@ -27,6 +27,7 @@ private:
     QWidget* buildHome();
     QWidget* buildSettings();
     void updateSnapshot(const Snapshot& value);
+    void updatePeers();
     void setRange(int minutes);
     void setLanguage(const QString& code);
     void arrangeCards();
@@ -50,7 +51,9 @@ private:
     QLabel *recordStatus_=nullptr,*recordBitrate_=nullptr,*recordFile_=nullptr,*recordSpeed_=nullptr;
     QLabel *recordTime_=nullptr,*recordDisk_=nullptr,*recordEta_=nullptr;
     QLabel* footer_=nullptr;
-    QLabel* trafficFooter_=nullptr;
+    QPushButton* peersToggle_=nullptr;
+    QWidget* peersPanel_=nullptr;
+    QLabel *peerStatus_[2]{},*peerTraffic_[2]{},*peersTotal_=nullptr;
     QList<QPushButton*> rangeButtons_;
     History cpuHistory_,obsCpuHistory_,gpuHistory_,fpsHistory_,streamHistory_,recordHistory_;
     Snapshot last_;
