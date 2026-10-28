@@ -113,7 +113,7 @@ public:
 protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);p.setRenderHint(QPainter::Antialiasing);
-        const qreal scale=std::min(width(),height())/18.0;
+        const qreal scale=(std::min(width(),height())-2.0)/18.0;
         p.translate(width()/2.0,height()/2.0);p.scale(scale,scale);p.translate(-9,-9);
         p.setPen(QPen(color_,1.8,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
         p.setBrush(Qt::NoBrush);
@@ -248,10 +248,11 @@ private:
 
 QLabel* addMetric(QGridLayout* grid,const QString& name,MetricGlyph glyph,const QColor& color) {
     auto* wrapper=new QWidget;wrapper->setObjectName("MetricRow");auto* row=new QHBoxLayout(wrapper);
-    row->setContentsMargins(0,0,0,0);row->setSpacing(3);
+    row->setContentsMargins(0,0,0,0);row->setSpacing(4);
     row->addWidget(new MetricIcon(glyph,color,name));
     auto* left=new QLabel(name);left->setObjectName("MetricName");left->setMinimumWidth(0);
     left->setWordWrap(true);left->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);left->setToolTip(name);
+    left->setAlignment(Qt::AlignLeft|Qt::AlignVCenter);
     auto* right=new QLabel("—");right->setObjectName("MetricValue");right->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
     right->setMinimumWidth(0);
     row->addWidget(left,1);row->addWidget(right,0);
@@ -462,19 +463,19 @@ QWidget* StatsDock::buildHome() {
     auto* page=new QWidget;auto* outer=new QVBoxLayout(page);
     outer->setContentsMargins(8,8,8,3);outer->setSpacing(5);
     auto* top=new QHBoxLayout;top->setContentsMargins(2,2,2,2);top->setSpacing(7);headerLayout_=top;
-    top->addWidget(new StatsMark);
+    top->addWidget(new StatsMark,0,Qt::AlignVCenter);
     auto* heading=new QLabel("Stream Stats");heading->setObjectName("DockTitle");top->addWidget(heading,1);
     for(int minutes:{1,5,15}){
         auto* button=new QPushButton(QString::number(minutes)+phrase(" м"," m"));
         button->setFixedSize(34,23);button->setToolTip(phrase("История графиков","Chart history"));
         QObject::connect(button,&QPushButton::clicked,this,[this,minutes]{setRange(minutes);});
-        top->addWidget(button);rangeButtons_.append(button);
+        top->addWidget(button,0,Qt::AlignVCenter);rangeButtons_.append(button);
     }
     auto* gear=new QPushButton;gear->setObjectName("SettingsButton");gear->setFixedSize(30,28);
     gear->setIcon(settingsIcon());gear->setIconSize(QSize(19,19));
     gear->setToolTip(phrase("Настройки","Settings"));
     QObject::connect(gear,&QPushButton::clicked,this,[this]{pages_->setCurrentWidget(settings_);});
-    top->addWidget(gear);outer->addLayout(top);
+    top->addWidget(gear,0,Qt::AlignVCenter);outer->addLayout(top);
     warningLabel_=new QLabel;warningLabel_->setObjectName("HealthWarning");warningLabel_->setWordWrap(true);
     warningLabel_->setStyleSheet("color:#ffdc45;background:#272116;border:1px solid #65532a;border-radius:5px;padding:3px;font-size:10px;");warningLabel_->hide();outer->addWidget(warningLabel_);
     auto* scroller=new QScrollArea;scroller->setWidgetResizable(true);
@@ -699,17 +700,19 @@ void StatsDock::arrangeCards(){
             auto* row=rows[i];
             row->setFixedHeight(metricHeight);
             row->setStyleSheet(columns==2?
-                "QWidget#MetricRow{background:#111f2d;border:1px solid #304a5d;border-radius:5px;}":
+                "QWidget#MetricRow{background:#111f2d;border:1px solid #2b4052;border-radius:5px;}":
                 "QWidget#MetricRow{background:transparent;border:0;}");
             auto* rowLayout=static_cast<QHBoxLayout*>(row->layout());
-            rowLayout->setContentsMargins(columns==2?5:0,0,columns==2?5:0,0);
+            rowLayout->setContentsMargins(columns==2?6:0,0,columns==2?6:0,0);
+            rowLayout->setSpacing(wide&&!roomy?3:4);
+            rowLayout->setAlignment(Qt::AlignVCenter);
             if(columns==2&&i==rows.size()-1&&rows.size()%2)
                 grid->addWidget(row,i/columns,0,1,2);
             else grid->addWidget(row,i/columns,i%columns);
         }
     }
     for(auto* label:home_->findChildren<QLabel*>("MetricName"))
-        label->setStyleSheet(QString("color:#8ea1c0;font-size:%1px;").arg(metricFont));
+        label->setStyleSheet(QString("color:#a3b2cc;font-size:%1px;").arg(metricFont));
     for(auto* label:home_->findChildren<QLabel*>("MetricValue"))
         label->setStyleSheet(QString("color:#dfe8ff;font-size:%1px;font-weight:700;").arg(metricFont));
     for(auto* icon:home_->findChildren<QWidget*>("MetricIcon"))
@@ -738,8 +741,8 @@ void StatsDock::arrangeCards(){
     }
     for(auto* frame:{systemCard_,streamCard_,recordCard_}){
         auto* layout=static_cast<QVBoxLayout*>(frame->layout());
-        layout->setContentsMargins(roomy?13:7,roomy?10:wide?4:5,roomy?13:7,roomy?10:wide?4:5);
-        layout->setSpacing(wide&&!roomy?1:2);
+        layout->setContentsMargins(roomy?13:8,roomy?10:wide?4:6,roomy?13:8,roomy?10:wide?4:6);
+        layout->setSpacing(wide&&!roomy?1:4);
     }
 }
 
