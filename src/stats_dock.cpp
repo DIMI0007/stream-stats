@@ -685,7 +685,7 @@ void StatsDock::arrangeCards(){
     const int chartHeight=roomy?155:wide?22:60;
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->setDisplayHeight(chartHeight);
     const int columns=((wide&&!roomy)||narrow)?1:2;
-    const int metricHeight=roomy?47:wide?18:narrow?26:34;
+    const int metricHeight=roomy?47:wide?13:narrow?26:34;
     const int metricFont=roomy?14:10;
     for(auto* grid:metricGrids_){
         QVector<QWidget*> rows;
@@ -713,7 +713,7 @@ void StatsDock::arrangeCards(){
     for(auto* label:home_->findChildren<QLabel*>("MetricValue"))
         label->setStyleSheet(QString("color:#dfe8ff;font-size:%1px;font-weight:700;").arg(metricFont));
     for(auto* icon:home_->findChildren<QWidget*>("MetricIcon"))
-        icon->setFixedSize(roomy?24:wide?13:16,roomy?24:wide?13:16);
+        icon->setFixedSize(roomy?24:wide?11:16,roomy?24:wide?11:16);
     const auto accentValue=[&](QLabel* label,const char* color){
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;").arg(color).arg(metricFont));
     };
