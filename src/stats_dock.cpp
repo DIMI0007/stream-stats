@@ -327,6 +327,7 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
     if(rangeMinutes_!=1&&rangeMinutes_!=5&&rangeMinutes_!=15)rangeMinutes_=1;
     systemMetricIndex_=std::clamp(saved.value("systemMetric",0).toInt(),0,3);
     warningsEnabled_=saved.value("warningsEnabled",true).toBool();sessionClock_.start();sampleClock_.start();
+    autoCollapseRecording_=saved.value("autoCollapseRecording",true).toBool();
     auto* root=new QVBoxLayout(this);root->setContentsMargins(0,0,0,0);
     pages_=new QStackedWidget;root->addWidget(pages_);
     buildPages();
@@ -537,6 +538,15 @@ QWidget* StatsDock::buildSettings() {
     auto* warnings=new QCheckBox(phrase("Предупреждения о кадрах и диске","Frame loss and disk warnings"));
     warnings->setChecked(warningsEnabled_);warnings->setToolTip(phrase("Кадры: потери выше 1% за последние 10 секунд. Диск: меньше 5 ГБ или 15 минут записи в течение 30 секунд.","Frames: over 1% loss in the last 10 seconds. Disk: under 5 GB or 15 minutes remaining for 30 seconds."));
     QObject::connect(warnings,&QCheckBox::toggled,this,[this](bool on){warningsEnabled_=on;QSettings saved(configFile(),QSettings::IniFormat);saved.setValue("warningsEnabled",on);if(!on&&warningLabel_)warningLabel_->hide();});outer->addWidget(warnings);
+    auto* autoCollapse=new QCheckBox;
+    autoCollapse->setObjectName("AutoCollapseRecording");autoCollapse->setChecked(autoCollapseRecording_);
+    auto* autoCollapseRow=new QHBoxLayout;autoCollapseRow->setSpacing(6);
+    auto* autoCollapseLabel=new QLabel(phrase("Сворачивать статистику записи после остановки","Collapse recording statistics after stopping"));
+    autoCollapseLabel->setWordWrap(true);autoCollapseLabel->setBuddy(autoCollapse);
+    autoCollapseRow->addWidget(autoCollapse);autoCollapseRow->addWidget(autoCollapseLabel,1);
+    QObject::connect(autoCollapse,&QCheckBox::toggled,this,[this](bool on){
+        autoCollapseRecording_=on;QSettings saved(configFile(),QSettings::IniFormat);saved.setValue("autoCollapseRecording",on);
+    });outer->addLayout(autoCollapseRow);
     auto* summary=new QPushButton(phrase("Сводка текущего сеанса","Current session summary"));summary->setObjectName("SessionSummaryButton");
     QObject::connect(summary,&QPushButton::clicked,this,[this]{showSummary();});outer->addWidget(summary);
     outer->addStretch(1);return page;
@@ -654,8 +664,8 @@ void StatsDock::updateSnapshot(const Snapshot& value,bool collect){
     const bool recordingEnded=last_.record.active&&!value.record.active;
     last_=value;
     if(recordingEnded){
-        recordExpanded_=false;
-        if(recordDetails_){const QSignalBlocker blocked(recordDetails_);recordDetails_->setChecked(false);}
+        recordExpanded_=!autoCollapseRecording_;
+        if(recordDetails_){const QSignalBlocker blocked(recordDetails_);recordDetails_->setChecked(recordExpanded_);}
     }
     if(collect){
     cpuHistory_.add(std::max(0.0,value.system.cpuPc));

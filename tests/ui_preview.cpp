@@ -6,6 +6,7 @@
 #include <QScrollBar>
 #include <QFrame>
 #include <QComboBox>
+#include <QCheckBox>
 #include <cstdio>
 
 int main(int argc,char** argv) {
@@ -66,6 +67,10 @@ int main(int argc,char** argv) {
     if(!capture("vertical-offline-310x900.png",310,900,true))return 4;
     auto* recordDetails=dock.findChild<QPushButton*>("RecordDetails");if(!recordDetails||!recordDetails->isVisible())return 10;
     recordDetails->click();app.processEvents();if(!recordDetails->isChecked())return 11;
+    auto* autoCollapse=dock.findChild<QCheckBox*>("AutoCollapseRecording");if(!autoCollapse||!autoCollapse->isChecked())return 17;
+    autoCollapse->setChecked(false);
+    dock.previewSamples(1);dock.previewOffline();app.processEvents();if(!recordDetails->isChecked())return 18;
+    autoCollapse->setChecked(true);
     dock.previewSamples(1);app.processEvents();if(recordDetails->isVisible())return 15;
     dock.previewOffline();app.processEvents();if(recordDetails->isChecked()||!recordDetails->isVisible())return 16;
     gear->click();app.processEvents();

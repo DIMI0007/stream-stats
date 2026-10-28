@@ -75,7 +75,7 @@ private:
     int layoutMode_=-1;
     int compactHeader_=-1;
     bool closing_=false;
-    bool recordExpanded_=false,warningsEnabled_=true;
+    bool recordExpanded_=false,warningsEnabled_=true,autoCollapseRecording_=true;
     QElapsedTimer sessionClock_,sampleClock_;
     double cpuSum_=0,observedSeconds_=0,gpuPeak_=-1,recordSeconds_=0;
     quint64 samples_=0,recordedBytes_=0,previousRecordedBytes_=0;
