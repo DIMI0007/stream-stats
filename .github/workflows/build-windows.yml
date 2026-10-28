@@ -50,9 +50,17 @@ jobs:
           Copy-Item INSTALL_RU.md package/INSTALL_RU.md
           $spec = Get-Content buildspec.json -Raw | ConvertFrom-Json
           $dll = Get-Item package/stream-stats/stream-stats.dll
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $vsRoot = & $vswhere -latest -products '*' -property installationPath
+          $dumpbin = Get-ChildItem "$vsRoot/VC/Tools/MSVC/*/bin/Hostx64/x64/dumpbin.exe" | Sort-Object FullName -Descending | Select-Object -First 1
+          if (!$dumpbin) { throw 'Binary inspection tool missing' }
+          $audit = & $dumpbin.FullName /headers /dependents /exports $dll.FullName
+          if ($LASTEXITCODE -ne 0) { throw 'Binary inspection failed' }
+          $audit | Set-Content package/BINARY_AUDIT.txt -Encoding utf8
+          if (!($audit -match '8664 machine') -or !($audit -match 'Dynamic base') -or !($audit -match 'NX compatible')) { throw 'Expected x64/ASLR/DEP protections missing' }
           [ordered]@{product='Stream Stats';version=$spec.version;commit=$env:GITHUB_SHA;obs='33.0.0';qt='6.11.1';packageType='unsigned-test-build';dllSha256=(Get-FileHash $dll.FullName -Algorithm SHA256).Hash}|ConvertTo-Json|Set-Content package/BUILD_INFO.json -Encoding utf8
       - uses: actions/upload-artifact@v4
         with:
-          name: StreamStats-1.0.8-OBS33-Windows-x64
+          name: StreamStats-1.0.9-OBS33-Windows-x64
           path: package/
           if-no-files-found: error

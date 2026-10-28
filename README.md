@@ -32,7 +32,7 @@ Stream Stats работает самостоятельно и показывае
 
 ## Как установить
 
-1. Полностью закройте OBS. Скачайте **StreamStats-1.0.8-OBS33-Windows-x64.zip** на [странице выпуска 1.0.8](https://github.com/DIMI0007/stream-stats/releases/tag/v1.0.8) и распакуйте ZIP.
+1. Полностью закройте OBS. Скачайте **StreamStats-1.0.9-OBS33-Windows-x64.zip** на [странице выпуска 1.0.9](https://github.com/DIMI0007/stream-stats/releases/tag/v1.0.9) и распакуйте ZIP.
 2. Откройте `C:\ProgramData\obs-studio\plugins\`. Удалите старую папку `stream-stats`, если она есть. Скопируйте сюда папку `stream-stats` из ZIP целиком.
 3. Запустите OBS и откройте **Док-панели → Stream Stats**.
 
