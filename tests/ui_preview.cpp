@@ -32,7 +32,7 @@ int main(int argc,char** argv) {
     if(!peersToggle||!peersPanel||peersToggle->isChecked()||!peersPanel->isHidden())return 8;
     auto* logo=dock.findChild<QWidget*>("StatsMark");
     auto* gear=dock.findChild<QPushButton*>("SettingsButton");
-    if(!logo||logo->size()!=QSize(28,28)||!gear||gear->size()!=QSize(30,28)||
+    if(!logo||logo->size()!=QSize(28,28)||!gear||gear->size()!=QSize(30,22)||
        gear->iconSize()!=QSize(19,19)||gear->icon().isNull())return 6;
     std::fprintf(stderr,"Preview samples prepared\n");std::fflush(stderr);
     auto capture=[&](const char* file,int width,int height,bool requireNoScroll){
