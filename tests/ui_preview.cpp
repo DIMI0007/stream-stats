@@ -38,6 +38,11 @@ int main(int argc,char** argv) {
     auto capture=[&](const char* file,int width,int height,bool requireNoScroll){
         std::fprintf(stderr,"Capture %s begin\n",file);std::fflush(stderr);
         dock.resize(width,height);dock.show();app.processEvents(QEventLoop::AllEvents,200);
+        for(auto* button:dock.findChildren<QPushButton*>()){
+            if(button->property("HistoryRange").toBool()&&button->height()!=gear->height()){
+                std::fprintf(stderr,"History button height differs from settings button\n");return false;
+            }
+        }
         std::fprintf(stderr,"Capture %s laid out\n",file);std::fflush(stderr);
         if(dock.width()!=width||dock.height()!=height){
             std::fprintf(stderr,"Unexpected rendered size: %dx%d\n",dock.width(),dock.height());return false;

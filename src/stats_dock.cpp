@@ -476,7 +476,7 @@ QWidget* StatsDock::buildHome() {
     auto* heading=new QLabel("Stream Stats");heading->setObjectName("DockTitle");top->addWidget(heading,1);
     for(int minutes:{1,5,15}){
         auto* button=new QPushButton(QString::number(minutes)+phrase(" м"," m"));
-        button->setFixedSize(34,22);button->setToolTip(phrase("История графиков","Chart history"));
+        button->setFixedSize(34,22);button->setProperty("HistoryRange",true);button->setToolTip(phrase("История графиков","Chart history"));
         QObject::connect(button,&QPushButton::clicked,this,[this,minutes]{setRange(minutes);});
         top->addWidget(button,0,Qt::AlignVCenter);rangeButtons_.append(button);
     }
@@ -746,7 +746,7 @@ void StatsDock::arrangeCards(){
     if(streamCount_)streamCount_->setStyleSheet(QString("color:#ffe184;background:#24301f;border:1px solid #70571b;border-radius:7px;font-size:%1px;font-weight:700;padding:1px 6px;").arg(roomy?14:10));
     for(auto* button:rangeButtons_){
         button->setFixedSize(compactHeader?28:34,22);
-        button->setStyleSheet(compactHeader?"padding:0 1px;":QString());
+        button->setStyleSheet("min-height:0px;padding:0 1px;");
     }
     for(auto* frame:{systemCard_,streamCard_,recordCard_}){
         auto* layout=static_cast<QVBoxLayout*>(frame->layout());
