@@ -19,7 +19,7 @@
 
 ## Как установить
 
-1. Полностью закройте OBS. Скачайте **StreamStats-1.0.3-OBS33-Windows-x64** на странице [последней успешной сборки](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) и распакуйте ZIP.
+1. Полностью закройте OBS. Скачайте **StreamStats-1.0.4-OBS33-Windows-x64** на странице [последней успешной сборки](https://github.com/DIMI0007/stream-stats/actions/workflows/build-windows.yml) и распакуйте ZIP.
 2. Откройте `C:\ProgramData\obs-studio\plugins\`. Удалите старую папку `stream-stats`, если она есть. Скопируйте сюда папку `stream-stats` из ZIP целиком.
 3. Запустите OBS и откройте **Док-панели → Stream Stats**.
 
@@ -28,3 +28,8 @@
 Для **OBS Studio 33 на Windows x64**. Сборка пока не подписана. Примеры на скриншотах созданы в тестовой среде; работа с реальными устройствами проверяется в OBS.
 
 [Общий стиль трёх плагинов](docs/VISUAL_STYLE_RU.md) · [Лицензия GPL v2 или новее](LICENSE_NOTICE.md) · [Разработчик OTMOPOZOK](https://www.youtube.com/channel/UCTAKYR3T2Ud8zZgNShgQfyw/)
+## Поддержать проект
+
+Если плагины полезны вам, поддержите проект донатом. Ваша помощь поддерживает развитие плагинов, исправления и будущую разработку.
+
+[Поддержать через DonationAlerts](https://www.donationalerts.com/r/otmopozok) · [Поддержать через DonatePay](https://donatepay.ru/don/OTMOPOZOK)

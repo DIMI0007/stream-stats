@@ -28,5 +28,12 @@ int main() {
     if(history.count()!=stats::historySeconds||last.size()!=60||
        last.front()!=stats::historySeconds-50||last.back()!=stats::historySeconds+9)return 5;
     std::puts("Stream aggregation, deduplication, resets, incomplete totals and history passed");
+    stats::SustainedProblem problem;
+    for(int i=0;i<9;++i)if(problem.update(true,1,10))return 6;
+    if(problem.update(false,1,10))return 7;
+    for(int i=0;i<9;++i)if(problem.update(true,1,10))return 8;
+    if(!problem.update(true,1,10))return 9;
+    if(problem.update(false,1,10)||problem.update(true,60,10))return 10;
+    std::puts("Sustained warning thresholds, recovery and long sampling gaps passed");
     return 0;
 }

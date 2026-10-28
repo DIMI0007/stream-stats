@@ -26,8 +26,13 @@ private:
     void buildPages();
     QWidget* buildHome();
     QWidget* buildSettings();
-    void updateSnapshot(const Snapshot& value);
+    void updateSnapshot(const Snapshot& value,bool collect=true);
     void updatePeers();
+    void showSummary();
+    void exportSummary();
+    QString summaryText()const;
+    void updateHealth(const Snapshot& value,double seconds);
+    void updateRecordDetails();
     void setRange(int minutes);
     void setLanguage(const QString& code);
     void arrangeCards();
@@ -39,6 +44,9 @@ private:
     QStackedWidget* pages_=nullptr;
     QWidget* home_=nullptr;
     QWidget* settings_=nullptr;
+    QWidget* summaryPage_=nullptr;
+    QLabel* warningLabel_=nullptr;
+    QPushButton* recordDetails_=nullptr;
     QGridLayout* cards_=nullptr;
     QHBoxLayout* headerLayout_=nullptr;
     QGridLayout* metricGrids_[3]{};
@@ -63,5 +71,13 @@ private:
     bool horizontal_=false;
     int layoutMode_=-1;
     bool closing_=false;
+    bool recordExpanded_=false,warningsEnabled_=true;
+    QElapsedTimer sessionClock_,sampleClock_;
+    double cpuSum_=0,observedSeconds_=0,gpuPeak_=0,recordSeconds_=0;
+    quint64 samples_=0,recordedBytes_=0,previousRecordedBytes_=0;
+    quint64 sessionRenderMissed_=0,sessionEncodeSkipped_=0,sessionNetworkDropped_=0;
+    Snapshot previousHealth_;
+    bool healthReady_=false;
+    SustainedProblem networkProblem_,renderProblem_,encodeProblem_,diskProblem_;
 };
 } // namespace stats

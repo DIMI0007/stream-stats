@@ -14,6 +14,17 @@ namespace stats {
 
 constexpr int historySeconds = 15 * 60;
 
+class SustainedProblem {
+public:
+    bool update(bool problem,double seconds,double threshold){
+        if(!problem)seconds_=0;
+        else if(std::isfinite(seconds)&&seconds>0&&seconds<=10)seconds_+=seconds;
+        return problem&&seconds_>=threshold;
+    }
+private:
+    double seconds_=0;
+};
+
 struct OutputReading {
     quintptr identity = 0;
     bool active = false;

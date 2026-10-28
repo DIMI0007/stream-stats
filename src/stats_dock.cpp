@@ -25,6 +25,13 @@
 #include <QLinearGradient>
 #include <algorithm>
 #include <cmath>
+#include <QMouseEvent>
+#include <QToolTip>
+#include <QFileDialog>
+#include <QSaveFile>
+#include <QCheckBox>
+#include <QDateTime>
+#include <QFile>
 
 namespace stats {
 namespace {
@@ -65,12 +72,11 @@ protected:
     void paintEvent(QPaintEvent*) override {
         QPainter p(this);p.setRenderHint(QPainter::Antialiasing);
         p.scale(width()/32.0,height()/32.0);
-        p.setPen(QPen(QColor("#00df8c"),2.4));p.setBrush(QColor("#06382c"));
-        p.drawEllipse(QRectF(2,2,28,28));
-        p.setPen(Qt::NoPen);p.setBrush(QColor("#00df8c"));
-        p.drawRoundedRect(QRectF(8,16,3.5,9),1.4,1.4);
-        p.drawRoundedRect(QRectF(14.3,9,3.5,16),1.4,1.4);
-        p.drawRoundedRect(QRectF(20.5,13,3.5,12),1.4,1.4);
+        p.setPen(Qt::NoPen);p.setBrush(QColor("#06382c"));p.drawRoundedRect(QRectF(0,0,32,32),9,9);
+        const QColor green("#00df8c");p.setBrush(green);p.drawEllipse(QPointF(16,16),3,3);
+        p.setBrush(Qt::NoBrush);p.setPen(QPen(green,2.5,Qt::SolidLine,Qt::RoundCap));
+        p.drawArc(QRectF(7,7,18,18),-50*16,100*16);p.drawArc(QRectF(7,7,18,18),130*16,100*16);
+        p.drawArc(QRectF(3,3,26,26),-45*16,90*16);p.drawArc(QRectF(3,3,26,26),135*16,90*16);
     }
 };
 
@@ -154,7 +160,8 @@ QLabel* addMetric(QGridLayout* grid,const QString& name) {
 class Chart final : public QWidget {
 public:
     explicit Chart(QVector<QPair<const History*,QColor>> series,QWidget* parent=nullptr)
-        :QWidget(parent),series_(std::move(series)) {setMinimumWidth(0);setFixedHeight(38);}
+        :QWidget(parent),series_(std::move(series)) {setMinimumWidth(0);setFixedHeight(38);setMouseTracking(true);}
+    void setRussian(bool value){ru_=value;}
     void setRange(int seconds){seconds_=seconds;update();}
     void setDisplayHeight(int height){setFixedHeight(height);update();}
     void setSeries(QVector<QPair<const History*,QColor>> series,const QString& unit,const QString& label){
@@ -168,7 +175,7 @@ protected:
         p.setBrush(QColor("#08131f"));p.setPen(QPen(QColor("#263b50"),1));
         p.drawRoundedRect(plot,4,4);
         const bool labeled=height()>=55;
-        const QRectF inner=plot.adjusted(6,labeled?17:5,-6,-6);
+        const QRectF inner=plot.adjusted(labeled?29:6,labeled?17:5,-6,labeled?-14:-6);
         p.setPen(QPen(QColor("#234056"),1,Qt::DashLine));
         for(int i=0;i<3;++i){const qreal y=inner.top()+inner.height()*i/2.0;
             p.drawLine(QPointF(inner.left(),y),QPointF(inner.right(),y));}
@@ -177,18 +184,24 @@ protected:
             p.drawText(inner,Qt::AlignCenter,inactiveMessage_);return;
         }
         QVector<QVector<double>> values;values.reserve(series_.size());
-        double maximum=1;
+        double maximum=0;
         for(const auto& series:series_){
             values.push_back(series.first->recent(seconds_));
             for(double value:values.back())maximum=std::max(maximum,value);
         }
-        maximum=std::ceil(maximum*1.2);
+        const double observedMax=maximum;
+        maximum=unit_=="%"?100:std::max(1.0,std::ceil(maximum*1.2));
         if(labeled){
             p.setPen(QPen(series_.isEmpty()?QColor("#8ea8c7"):series_.front().second,2));
             p.drawLine(QPointF(plot.left()+7,plot.top()+9),QPointF(plot.left()+17,plot.top()+9));
             p.setPen(QColor("#b5c9e2"));QFont font=p.font();font.setPixelSize(9);p.setFont(font);
             p.drawText(QRectF(plot.left()+22,plot.top()+3,plot.width()-29,12),Qt::AlignLeft,
-                label_+" · "+phraseMax(maximum,unit_));
+                label_+QString::fromUtf8(ru_?" · макс. ":" · max ")+phraseMax(observedMax,unit_));
+            p.setPen(QColor("#8ea1c0"));font.setPixelSize(8);p.setFont(font);
+            p.drawText(QRectF(plot.left()+2,inner.top()-3,25,10),Qt::AlignLeft,QString::number(maximum,'f',0));
+            p.drawText(QRectF(plot.left()+2,inner.bottom()-7,25,10),Qt::AlignLeft,"0");
+            p.drawText(QRectF(inner.left(),inner.bottom()+2,inner.width(),10),Qt::AlignLeft,QString("−%1 %2").arg(seconds_/60).arg(ru_?"мин":"min"));
+            p.drawText(QRectF(inner.left(),inner.bottom()+2,inner.width(),10),Qt::AlignRight,ru_?"сейчас":"now");
         }
         p.save();p.setClipRect(inner.adjusted(-2,-2,2,2));
         for(int s=0;s<series_.size();++s){
@@ -232,6 +245,22 @@ protected:
         }
         p.restore();
     }
+    void mouseMoveEvent(QMouseEvent* event)override{
+        if(series_.isEmpty()||!inactiveMessage_.isEmpty())return;
+        const auto points=series_.front().first->recent(seconds_);if(points.isEmpty())return;
+        const double left=height()>=55?30:7,right=width()-7;
+        if(right<=left)return;
+        const int age=qRound(std::clamp((right-event->position().x())/(right-left),0.0,1.0)*(seconds_-1));
+        const int index=points.size()-1-age;if(index<0){QToolTip::hideText();return;}
+        const auto extremes=std::minmax_element(points.cbegin(),points.cend());double sum=0;for(double value:points)sum+=value;
+        const QLocale locale(ru_?QLocale::Russian:QLocale::English);
+        const auto number=[&](double value){return locale.toString(value,'f',1)+" "+unit_;};
+        const QString text=label_+" · "+QString::number(age)+(ru_?" сек. назад":" sec ago")+"\n"+number(points[index])+"\n"+
+            (ru_?"Мин.: ":"Min: ")+number(*extremes.first)+(ru_?" · Сред.: ":" · Avg: ")+number(sum/points.size())+
+            (ru_?" · Макс.: ":" · Max: ")+number(*extremes.second);
+        QToolTip::showText(event->globalPosition().toPoint(),text,this);
+    }
+    void leaveEvent(QEvent*)override{QToolTip::hideText();}
 private:
     static QString phraseMax(double max,const QString& unit){
         return QString::number(max,'f',0)+(unit.isEmpty()?QString():" "+unit);
@@ -240,6 +269,7 @@ private:
     int seconds_=60;
     QString unit_,label_;
     QString inactiveMessage_;
+    bool ru_=true;
 };
 
 StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
@@ -277,6 +307,7 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
     rangeMinutes_=saved.value("rangeMinutes",1).toInt();
     if(rangeMinutes_!=1&&rangeMinutes_!=5&&rangeMinutes_!=15)rangeMinutes_=1;
     systemMetricIndex_=std::clamp(saved.value("systemMetric",0).toInt(),0,3);
+    warningsEnabled_=saved.value("warningsEnabled",true).toBool();sessionClock_.start();sampleClock_.start();
     auto* root=new QVBoxLayout(this);root->setContentsMargins(0,0,0,0);
     pages_=new QStackedWidget;root->addWidget(pages_);
     buildPages();
@@ -286,7 +317,13 @@ StatsDock::StatsDock(QWidget* parent):QWidget(parent) {
     updateSnapshot(collector_.sample());
 }
 
-void StatsDock::shutdown(){closing_=true;tick_.stop();}
+void StatsDock::shutdown(){
+    if(closing_)return;closing_=true;tick_.stop();
+#ifndef STREAM_STATS_PREVIEW
+    const auto path=QFileInfo(configFile()).absolutePath()+"/last-session-summary.txt";
+    QSaveFile saved(path);if(saved.open(QIODevice::WriteOnly)){saved.write(summaryText().toUtf8());saved.commit();}
+#endif
+}
 #ifdef STREAM_STATS_PREVIEW
 void StatsDock::previewSamples(int count){for(int i=0;i<count;++i)updateSnapshot(collector_.sample());}
 void StatsDock::previewOffline(){
@@ -306,11 +343,12 @@ bool StatsDock::russian() const {
 QString StatsDock::phrase(const char* ru,const char* en) const {return QString::fromUtf8(russian()?ru:en);}
 
 void StatsDock::buildPages() {
+    if(summaryPage_){pages_->removeWidget(summaryPage_);summaryPage_->deleteLater();summaryPage_=nullptr;}
     if(home_){pages_->removeWidget(home_);home_->deleteLater();home_=nullptr;}
     if(settings_){pages_->removeWidget(settings_);settings_->deleteLater();settings_=nullptr;}
     layoutMode_=-1;home_=buildHome();settings_=buildSettings();
     pages_->addWidget(home_);pages_->addWidget(settings_);pages_->setCurrentWidget(home_);
-    arrangeCards();updateSnapshot(last_);
+    arrangeCards();updateSnapshot(last_,false);
 }
 
 QWidget* StatsDock::buildHome() {
@@ -330,6 +368,8 @@ QWidget* StatsDock::buildHome() {
     gear->setToolTip(phrase("Настройки","Settings"));
     QObject::connect(gear,&QPushButton::clicked,this,[this]{pages_->setCurrentWidget(settings_);});
     top->addWidget(gear);outer->addLayout(top);
+    warningLabel_=new QLabel;warningLabel_->setObjectName("HealthWarning");warningLabel_->setWordWrap(true);
+    warningLabel_->setStyleSheet("color:#ffdc45;background:#272116;border:1px solid #65532a;border-radius:5px;padding:3px;font-size:10px;");warningLabel_->hide();outer->addWidget(warningLabel_);
     auto* scroller=new QScrollArea;scroller->setWidgetResizable(true);
     scroller->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     auto* host=new QWidget;host->setObjectName("CardHost");cards_=new QGridLayout(host);
@@ -338,13 +378,13 @@ QWidget* StatsDock::buildHome() {
     QHBoxLayout* systemHeader=nullptr;
     systemCard_=card(phrase("Система","System"),QColor("#72e9f4"),0,body,&systemHeader);
     systemSelector_=new QComboBox;systemSelector_->setObjectName("SystemMetricSelector");
-    systemSelector_->addItems({phrase("CPU ПК","PC CPU"),phrase("CPU OBS","OBS CPU"),"GPU","FPS"});
+    systemSelector_->addItems({phrase("CPU ПК","PC CPU"),phrase("CPU OBS","OBS CPU"),phrase("GPU ПК","PC GPU"),"FPS"});
     systemSelector_->setToolTip(phrase("Показатель системного графика","System graph metric"));
     systemHeader->addWidget(systemSelector_);
     metricGrids_[0]=metricGrid(body);
     cpuObs_=addMetric(metricGrids_[0],phrase("CPU OBS","OBS CPU"));
     cpuPc_=addMetric(metricGrids_[0],phrase("CPU ПК","PC CPU"));
-    gpu_=addMetric(metricGrids_[0],"GPU");
+    gpu_=addMetric(metricGrids_[0],phrase("GPU компьютера","Computer GPU"));
     ramObs_=addMetric(metricGrids_[0],phrase("RAM OBS","OBS RAM"));
     ramFree_=addMetric(metricGrids_[0],phrase("Своб. RAM","Free RAM"));
     fps_=addMetric(metricGrids_[0],"FPS");
@@ -359,7 +399,7 @@ QWidget* StatsDock::buildHome() {
         QSettings saved(configFile(),QSettings::IniFormat);saved.setValue("systemMetric",index);
         switch(index){
         case 1:systemChart_->setSeries({{&obsCpuHistory_,QColor("#59dfff")}},"%",phrase("CPU OBS","OBS CPU"));break;
-        case 2:systemChart_->setSeries({{&gpuHistory_,QColor("#b995ff")}},"%","GPU");break;
+        case 2:systemChart_->setSeries({{&gpuHistory_,QColor("#b995ff")}},"%",phrase("GPU ПК","PC GPU"));break;
         case 3:systemChart_->setSeries({{&fpsHistory_,QColor("#ffdc45")}},"FPS","FPS");break;
         default:systemChart_->setSeries({{&cpuHistory_,QColor("#07df91")}},"%",phrase("CPU ПК","PC CPU"));break;
         }
@@ -384,7 +424,11 @@ QWidget* StatsDock::buildHome() {
     streamChart_->setToolTip(phrase("Суммарный фактический битрейт активных выходов","Actual aggregate bitrate of active outputs"));
     body->addWidget(streamChart_);
 
-    recordCard_=card(phrase("Запись","Recording"),QColor("#ff8484"),2,body);
+    QHBoxLayout* recordHeader=nullptr;
+    recordCard_=card(phrase("Запись","Recording"),QColor("#ff8484"),2,body,&recordHeader);
+    recordDetails_=new QPushButton(phrase("Подробнее","Details"));recordDetails_->setObjectName("RecordDetails");recordDetails_->setStyleSheet("font-size:9px;padding:0 3px;");
+    recordDetails_->setFixedHeight(18);recordDetails_->setCheckable(true);recordDetails_->setChecked(recordExpanded_);recordHeader->addWidget(recordDetails_);
+    QObject::connect(recordDetails_,&QPushButton::toggled,this,[this](bool open){recordExpanded_=open;updateRecordDetails();});
     metricGrids_[2]=metricGrid(body);
     recordStatus_=addMetric(metricGrids_[2],phrase("Статус","Status"));
     recordBitrate_=addMetric(metricGrids_[2],phrase("Битрейт","Bitrate"));
@@ -398,6 +442,7 @@ QWidget* StatsDock::buildHome() {
     recordChart_->setSeries({{&recordHistory_,QColor("#72e9f4")}},"kb/s",phrase("Битрейт записи","Record bitrate"));
     recordChart_->setToolTip(phrase("Фактический битрейт записи","Actual recording bitrate"));
     body->addWidget(recordChart_);
+    for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->setRussian(russian());
     scroller->setWidget(host);outer->addWidget(scroller,1);
     peersToggle_=new QPushButton(phrase("▸ Наши плагины","▸ Our plugins"));
     peersToggle_->setObjectName("PeersToggle");peersToggle_->setCheckable(true);
@@ -465,6 +510,11 @@ QWidget* StatsDock::buildSettings() {
     auto* hint=new QLabel(phrase("Графики обновляются раз в секунду. История хранится только в памяти OBS и очищается при закрытии программы.",
         "Charts update once per second. History stays in OBS memory and clears when OBS exits."));
     hint->setWordWrap(true);hint->setObjectName("MetricName");outer->addWidget(hint);
+    auto* warnings=new QCheckBox(phrase("Предупреждения о кадрах и диске","Frame loss and disk warnings"));
+    warnings->setChecked(warningsEnabled_);warnings->setToolTip(phrase("Кадры: потери выше 1% в течение 10 секунд. Диск: меньше 5 ГБ или 15 минут записи в течение 30 секунд.","Frames: over 1% loss for 10 seconds. Disk: under 5 GB or 15 minutes remaining for 30 seconds."));
+    QObject::connect(warnings,&QCheckBox::toggled,this,[this](bool on){warningsEnabled_=on;QSettings saved(configFile(),QSettings::IniFormat);saved.setValue("warningsEnabled",on);if(!on&&warningLabel_)warningLabel_->hide();});outer->addWidget(warnings);
+    auto* summary=new QPushButton(phrase("Сводка текущего сеанса","Current session summary"));summary->setObjectName("SessionSummaryButton");
+    QObject::connect(summary,&QPushButton::clicked,this,[this]{showSummary();});outer->addWidget(summary);
     outer->addStretch(1);return page;
 }
 
@@ -570,22 +620,28 @@ void StatsDock::arrangeCards(){
 
 void StatsDock::resizeEvent(QResizeEvent* event){QWidget::resizeEvent(event);if(cards_)arrangeCards();}
 
-void StatsDock::updateSnapshot(const Snapshot& value){
+void StatsDock::updateSnapshot(const Snapshot& value,bool collect){
+    if(collect){
+        const double seconds=sampleClock_.isValid()?sampleClock_.restart()/1000.0:0;
+        updateHealth(value,seconds);
+    }
     last_=value;
+    if(collect){
     cpuHistory_.add(std::max(0.0,value.system.cpuPc));
     obsCpuHistory_.add(std::max(0.0,value.system.cpuObs));
     if(value.system.gpu>=0)gpuHistory_.add(value.system.gpu);
     fpsHistory_.add(value.system.fps);
     streamHistory_.add(value.stream.kbps);
     recordHistory_.add(value.record.kbps);
+    }
     if(!cpuObs_)return;
     const QLocale locale=russian()?QLocale(QLocale::Russian):QLocale(QLocale::English);
     const auto percentage=[&](double n){return n<0?QString("—"):locale.toString(n,'f',1)+" %";};
     const auto rate=[&](double n){return locale.toString(n,'f',0)+" kb/s";};
     cpuObs_->setText(percentage(value.system.cpuObs));cpuPc_->setText(percentage(value.system.cpuPc));
     gpu_->setText(percentage(value.system.gpu));
-    gpu_->setToolTip(phrase("Загрузка самого занятого GPU-движка; «—» означает, что счётчик Windows недоступен.",
-        "Busiest GPU engine; — means the Windows counter is unavailable."));
+    gpu_->setToolTip(phrase("Загрузка наиболее занятого движка видеокарты всеми программами, включая OBS. Это не отдельная нагрузка OBS или плагинов. «—» — счётчик недоступен.",
+        "Busiest GPU engine across all applications, including OBS. Not OBS-only or plugin GPU usage. — means unavailable."));
     ramObs_->setText(bytesText(value.system.ramObs,locale));
     ramFree_->setText(bytesText(value.system.ramFree,locale));
     fps_->setText(locale.toString(value.system.fps,'f',1));
@@ -643,6 +699,83 @@ void StatsDock::updateSnapshot(const Snapshot& value){
         phrase("Запись на паузе","Recording paused"):QString());
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->update();
     if(peersPanel_&&peersPanel_->isVisible())updatePeers();
+    updateRecordDetails();
+}
+
+void StatsDock::updateRecordDetails(){
+    if(!recordDetails_||!metricGrids_[2])return;
+    const bool active=last_.record.active;
+    recordDetails_->setVisible(!active);
+    recordDetails_->setText(recordExpanded_?phrase("Свернуть","Less"):phrase("Подробнее","Details"));
+    for(int i=0;i<metricGrids_[2]->count();++i){auto* item=metricGrids_[2]->itemAt(i);if(item&&item->widget())item->widget()->setVisible(i==0||active||recordExpanded_);}
+    const bool roomy=layoutMode_==2,wide=layoutMode_==1;
+    recordChart_->setDisplayHeight(wide?22:!active&&!recordExpanded_?30:roomy?155:60);
+}
+
+void StatsDock::updateHealth(const Snapshot& value,double seconds){
+    const bool timed=seconds>0&&seconds<=5;
+    if(timed){
+        if(value.system.cpuObs>=0){cpuSum_+=value.system.cpuObs*seconds;observedSeconds_+=seconds;}
+        if(value.record.active&&!value.record.paused)recordSeconds_+=seconds;
+    }
+    ++samples_;if(value.system.gpu>=0)gpuPeak_=std::max(gpuPeak_,value.system.gpu);
+    const auto delta=[](quint64 current,quint64 previous){return current>=previous?current-previous:quint64(0);};
+    quint64 netFrames=0,netLost=0,renderFrames=0,renderLost=0,encodeFrames=0,encodeLost=0;
+    if(healthReady_){
+        netFrames=delta(value.stream.frames,previousHealth_.stream.frames);netLost=delta(value.stream.dropped,previousHealth_.stream.dropped);
+        renderFrames=delta(value.system.renderFrames,previousHealth_.system.renderFrames);renderLost=delta(value.system.renderMissed,previousHealth_.system.renderMissed);
+        encodeFrames=delta(value.system.encodeFrames,previousHealth_.system.encodeFrames);encodeLost=delta(value.system.encodeSkipped,previousHealth_.system.encodeSkipped);
+        sessionNetworkDropped_+=netLost;sessionRenderMissed_+=renderLost;sessionEncodeSkipped_+=encodeLost;
+    }
+    if(value.record.active&&value.record.fileSizeAvailable){
+        recordedBytes_+=previousHealth_.record.active&&value.record.fileBytes>=previousRecordedBytes_?value.record.fileBytes-previousRecordedBytes_:value.record.fileBytes;
+        previousRecordedBytes_=value.record.fileBytes;
+    }else previousRecordedBytes_=0;
+    const auto loss=[](quint64 lost,quint64 frames){return frames>0&&double(lost)/frames>0.01;};
+    QStringList problems;
+    const double elapsed=timed?seconds:0;
+    if(networkProblem_.update(value.stream.active&&loss(netLost,netFrames),elapsed,10))problems<<phrase("Устойчивые сетевые потери","Sustained network frame loss");
+    if(renderProblem_.update(loss(renderLost,renderFrames),elapsed,10))problems<<phrase("OBS не успевает рисовать кадры","OBS cannot render frames in time");
+    if(encodeProblem_.update(value.record.active||value.stream.active?loss(encodeLost,encodeFrames):false,elapsed,10))problems<<phrase("Кодировщик пропускает кадры","Encoder is skipping frames");
+    const bool diskLow=value.record.active&&value.record.diskAvailable&&(value.record.freeBytes<5ull*1024*1024*1024||(value.record.secondsUntilFull>=0&&value.record.secondsUntilFull<900));
+    if(diskProblem_.update(diskLow,elapsed,30))problems<<phrase("Мало места для записи","Recording disk is running low");
+    if(warningLabel_){warningLabel_->setText(problems.join(" · "));warningLabel_->setVisible(warningsEnabled_&&!problems.isEmpty());}
+    previousHealth_=value;healthReady_=true;
+}
+
+QString StatsDock::summaryText()const{
+    const QLocale locale(russian()?QLocale::Russian:QLocale::English);
+    return phrase("Обновлено: ","Updated: ")+QDateTime::currentDateTime().toString("dd.MM.yyyy HH:mm:ss")+"\n"+
+        phrase("Работа OBS под наблюдением: ","Observed OBS session: ")+duration(sessionClock_.isValid()?sessionClock_.elapsed()/1000:0)+"\n"+
+        phrase("Средняя CPU OBS: ","Average OBS CPU: ")+(observedSeconds_>0?locale.toString(cpuSum_/observedSeconds_,'f',1)+" %":"—")+"\n"+
+        phrase("Максимум GPU компьютера: ","Peak PC GPU: ")+locale.toString(gpuPeak_,'f',1)+" %\n"+
+        phrase("Передано видеоданных: ","Stream video sent: ")+(last_.stream.incomplete?QString::fromUtf8("≥ "):QString())+bytesText(last_.stream.totalBytes,locale)+"\n"+
+        phrase("Сетевые потери кадров: ","Network frames lost: ")+locale.toString(sessionNetworkDropped_)+"\n"+
+        phrase("Пропуски рендера: ","Render frames missed: ")+locale.toString(sessionRenderMissed_)+"\n"+
+        phrase("Пропуски кодирования: ","Encode frames skipped: ")+locale.toString(sessionEncodeSkipped_)+"\n"+
+        phrase("Время записи без пауз: ","Recording time without pauses: ")+duration(qint64(recordSeconds_))+"\n"+
+        phrase("Учтённый объём записи: ","Observed recording data: ")+bytesText(recordedBytes_,locale);
+}
+
+void StatsDock::showSummary(){
+    if(summaryPage_){pages_->removeWidget(summaryPage_);summaryPage_->deleteLater();}
+    summaryPage_=new QWidget;auto* outer=new QVBoxLayout(summaryPage_);outer->setContentsMargins(8,8,8,8);
+    auto* back=new QPushButton(phrase("← Назад","← Back"));QObject::connect(back,&QPushButton::clicked,this,[this]{pages_->setCurrentWidget(settings_);});outer->addWidget(back);
+    auto* scroll=new QScrollArea;scroll->setWidgetResizable(true);auto* content=new QWidget;auto* rows=new QVBoxLayout(content);
+    auto* title=new QLabel(phrase("Сводка текущего сеанса","Current session summary"));title->setObjectName("DockTitle");rows->addWidget(title);
+    auto* text=new QLabel(summaryText());text->setObjectName("SessionSummaryText");text->setWordWrap(true);text->setTextFormat(Qt::PlainText);rows->addWidget(text);
+    auto* exportButton=new QPushButton(phrase("Сохранить CSV","Save CSV"));QObject::connect(exportButton,&QPushButton::clicked,this,[this]{exportSummary();});rows->addWidget(exportButton);
+    QFile previous(QFileInfo(configFile()).absolutePath()+"/last-session-summary.txt");if(previous.open(QIODevice::ReadOnly)){
+        auto* old=new QLabel(phrase("Предыдущий запуск OBS\n","Previous OBS session\n")+QString::fromUtf8(previous.read(32768)));old->setTextFormat(Qt::PlainText);old->setWordWrap(true);rows->addWidget(old);
+    }
+    rows->addStretch();scroll->setWidget(content);outer->addWidget(scroll,1);pages_->addWidget(summaryPage_);pages_->setCurrentWidget(summaryPage_);
+}
+
+void StatsDock::exportSummary(){
+    const auto path=QFileDialog::getSaveFileName(this,phrase("Сохранить сводку","Save session summary"),"StreamStats-"+QDateTime::currentDateTime().toString("yyyy-MM-dd-HH-mm")+".csv","CSV (*.csv)");if(path.isEmpty())return;
+    QByteArray csv="\xEF\xBB\xBF";csv+="metric,value\r\n";
+    for(const auto& line:summaryText().split('\n')){const auto separator=line.indexOf(": ");QString key=separator<0?line:line.left(separator),value=separator<0?QString():line.mid(separator+2);key.replace('"',"\"\"");value.replace('"',"\"\"");csv+=("\""+key+"\",\""+value+"\"\r\n").toUtf8();}
+    QSaveFile file(path);if(!file.open(QIODevice::WriteOnly)||file.write(csv)!=csv.size()||!file.commit())QToolTip::showText(mapToGlobal(QPoint(20,20)),phrase("Не удалось сохранить файл","Could not save file"),this);
 }
 
 void StatsDock::updatePeers(){
@@ -657,7 +790,11 @@ void StatsDock::updatePeers(){
         sent+=reading.sent;received+=reading.received;
         peerTraffic_[i]->setText(QString::fromUtf8("↑ ")+peerBytes(reading.sent,locale)+
             QString::fromUtf8("  ↓ ")+peerBytes(reading.received,locale));
-        peerStatus_[i]->setText(reading.connected?phrase("● Связь","● Linked"):phrase("● Нет связи","● Offline"));
+        peerStatus_[i]->setText(reading.connected?phrase("● Связь","● Linked"):
+            reading.state==PeerState::Unsupported?phrase("● Нужна новая версия","● Update needed"):
+            reading.state==PeerState::NoResponse?phrase("● Нет ответа","● No response"):phrase("● Не загружен","● Not loaded"));
+        peerStatus_[i]->setToolTip(reading.state==PeerState::NotLoaded?phrase("Плагин выключен, не установлен или не смог загрузиться в OBS.","Plugin is disabled, not installed or failed to load in OBS."):
+            reading.state==PeerState::Unsupported?phrase("Эта версия плагина не поддерживает обмен счётчиками со Stats.","This plugin version does not expose counters to Stats."):phrase("Доступ к локальным счётчикам внутри OBS. Это не проверка подключения к сервисам.","Local counter access inside OBS. This does not check service connections."));
         peerStatus_[i]->setStyleSheet(QString("color:%1;font-size:10px;").arg(reading.connected?"#07df91":"#8ea1c0"));
     }
     peersTotal_->setText(phrase("Всего","Total")+QString::fromUtf8("  ↑ ")+peerBytes(sent,locale)+
