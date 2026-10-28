@@ -160,11 +160,98 @@ QGridLayout* metricGrid(QVBoxLayout* body) {
     body->addWidget(host);return grid;
 }
 
-QLabel* addMetric(QGridLayout* grid,const QString& name) {
+enum class MetricGlyph {Chip,Monitor,Gpu,Memory,Gauge,Timer,Frame,Encode,
+    Broadcast,Upload,Data,Network,Record,File,Speed,Clock,Disk,Hourglass};
+
+class MetricIcon final : public QWidget {
+public:
+    MetricIcon(MetricGlyph glyph,const QColor& color,const QString& name)
+        :glyph_(glyph),color_(color){setObjectName("MetricIcon");setFixedSize(16,16);setToolTip(name);setAccessibleName(name);}
+protected:
+    void paintEvent(QPaintEvent*) override {
+        QPainter p(this);p.setRenderHint(QPainter::Antialiasing);
+        const qreal scale=std::min(width(),height())/20.0;
+        p.translate(width()/2.0,height()/2.0);p.scale(scale,scale);p.translate(-10,-10);
+        p.setPen(QPen(color_,1.7,Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));p.setBrush(Qt::NoBrush);
+        switch(glyph_){
+        case MetricGlyph::Chip:
+            p.drawRoundedRect(QRectF(5,5,10,10),1.5,1.5);
+            p.drawRoundedRect(QRectF(8,8,4,4),0.7,0.7);
+            for(int n:{7,13}){p.drawLine(QPointF(n,2),QPointF(n,5));p.drawLine(QPointF(n,15),QPointF(n,18));
+                p.drawLine(QPointF(2,n),QPointF(5,n));p.drawLine(QPointF(15,n),QPointF(18,n));}break;
+        case MetricGlyph::Monitor:
+            p.drawRoundedRect(QRectF(2.5,3.5,15,11),1.5,1.5);
+            p.drawLine(QPointF(10,14.5),QPointF(10,17));p.drawLine(QPointF(6,17),QPointF(14,17));break;
+        case MetricGlyph::Gpu:
+            p.drawRoundedRect(QRectF(2,5,16,10),1.5,1.5);p.drawEllipse(QPointF(10,10),3,3);
+            p.drawLine(QPointF(4,16),QPointF(16,16));p.drawLine(QPointF(5,7),QPointF(6,7));break;
+        case MetricGlyph::Memory:
+            p.drawRoundedRect(QRectF(2,6,16,9),1,1);
+            for(int x:{5,9,13})p.drawLine(QPointF(x,8),QPointF(x,11));
+            p.drawLine(QPointF(5,15),QPointF(5,17));p.drawLine(QPointF(10,15),QPointF(10,17));
+            p.drawLine(QPointF(15,15),QPointF(15,17));break;
+        case MetricGlyph::Gauge:
+            p.drawArc(QRectF(2.5,3,15,15),30*16,150*16);p.drawArc(QRectF(2.5,3,15,15),210*16,150*16);
+            p.drawLine(QPointF(10,11),QPointF(14,7));p.setBrush(color_);p.drawEllipse(QPointF(10,11),1.2,1.2);break;
+        case MetricGlyph::Timer:
+            p.drawEllipse(QRectF(4,5,12,12));p.drawLine(QPointF(10,5),QPointF(10,2));
+            p.drawLine(QPointF(7,2),QPointF(13,2));p.drawLine(QPointF(10,11),QPointF(13,8));break;
+        case MetricGlyph::Frame:
+            p.drawRoundedRect(QRectF(4,3,12,14),1,1);p.drawLine(QPointF(7,7),QPointF(13,7));
+            p.drawLine(QPointF(7,10),QPointF(13,10));p.drawLine(QPointF(7,13),QPointF(11,13));break;
+        case MetricGlyph::Encode:
+            p.drawRoundedRect(QRectF(3.5,4,13,12),1,1);p.drawLine(QPointF(6,8),QPointF(14,8));
+            p.drawLine(QPointF(6,12),QPointF(11,12));p.drawLine(QPointF(13,11),QPointF(16,14));break;
+        case MetricGlyph::Broadcast:
+            p.setBrush(color_);p.drawEllipse(QPointF(10,10),1.8,1.8);p.setBrush(Qt::NoBrush);
+            p.drawArc(QRectF(5,5,10,10),-60*16,120*16);p.drawArc(QRectF(5,5,10,10),120*16,120*16);
+            p.drawArc(QRectF(2,2,16,16),-55*16,110*16);p.drawArc(QRectF(2,2,16,16),125*16,110*16);break;
+        case MetricGlyph::Upload:
+            p.drawLine(QPointF(10,15),QPointF(10,3));p.drawLine(QPointF(6,7),QPointF(10,3));
+            p.drawLine(QPointF(10,3),QPointF(14,7));p.drawLine(QPointF(4,14),QPointF(4,17));
+            p.drawLine(QPointF(4,17),QPointF(16,17));p.drawLine(QPointF(16,17),QPointF(16,14));break;
+        case MetricGlyph::Data:
+            p.drawEllipse(QRectF(3,3,14,5));p.drawArc(QRectF(3,8,14,5),180*16,180*16);
+            p.drawArc(QRectF(3,12,14,5),180*16,180*16);p.drawLine(QPointF(3,5.5),QPointF(3,14.5));
+            p.drawLine(QPointF(17,5.5),QPointF(17,14.5));break;
+        case MetricGlyph::Network:
+            p.drawArc(QRectF(2,4,16,13),40*16,100*16);p.drawArc(QRectF(5,8,10,8),40*16,100*16);
+            p.setBrush(color_);p.drawEllipse(QPointF(10,16),1.2,1.2);break;
+        case MetricGlyph::Record:
+            p.drawEllipse(QRectF(2.5,2.5,15,15));p.setBrush(color_);p.drawEllipse(QPointF(10,10),4,4);break;
+        case MetricGlyph::File:
+            p.drawLine(QPointF(5,2.5),QPointF(12,2.5));p.drawLine(QPointF(12,2.5),QPointF(16,6.5));
+            p.drawLine(QPointF(16,6.5),QPointF(16,17));p.drawLine(QPointF(16,17),QPointF(5,17));
+            p.drawLine(QPointF(5,17),QPointF(5,2.5));p.drawLine(QPointF(12,2.5),QPointF(12,6.5));
+            p.drawLine(QPointF(12,6.5),QPointF(16,6.5));break;
+        case MetricGlyph::Speed:
+            p.drawArc(QRectF(2.5,3,15,15),30*16,300*16);
+            p.drawLine(QPointF(10,11),QPointF(15,6));p.setBrush(color_);p.drawEllipse(QPointF(10,11),1.2,1.2);break;
+        case MetricGlyph::Clock:
+            p.drawEllipse(QRectF(2.5,2.5,15,15));p.drawLine(QPointF(10,10),QPointF(10,5));
+            p.drawLine(QPointF(10,10),QPointF(13.5,12));break;
+        case MetricGlyph::Disk:
+            p.drawRoundedRect(QRectF(2.5,5,15,11),1.5,1.5);p.drawLine(QPointF(3,12),QPointF(17,12));
+            p.setBrush(color_);p.drawEllipse(QPointF(14.5,14),0.8,0.8);break;
+        case MetricGlyph::Hourglass:
+            p.drawLine(QPointF(5,2.5),QPointF(15,2.5));p.drawLine(QPointF(5,17.5),QPointF(15,17.5));
+            p.drawLine(QPointF(6,3),QPointF(6,6));p.drawLine(QPointF(14,3),QPointF(14,6));
+            p.drawLine(QPointF(6,6),QPointF(10,10));p.drawLine(QPointF(14,6),QPointF(10,10));
+            p.drawLine(QPointF(10,10),QPointF(6,14));p.drawLine(QPointF(10,10),QPointF(14,14));
+            p.drawLine(QPointF(6,14),QPointF(6,17));p.drawLine(QPointF(14,14),QPointF(14,17));break;
+        }
+    }
+private:
+    MetricGlyph glyph_;
+    QColor color_;
+};
+
+QLabel* addMetric(QGridLayout* grid,const QString& name,MetricGlyph glyph,const QColor& color) {
     auto* wrapper=new QWidget;wrapper->setObjectName("MetricRow");auto* row=new QHBoxLayout(wrapper);
     row->setContentsMargins(0,0,0,0);row->setSpacing(3);
+    row->addWidget(new MetricIcon(glyph,color,name));
     auto* left=new QLabel(name);left->setObjectName("MetricName");left->setMinimumWidth(0);
-    left->setWordWrap(true);left->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);
+    left->setWordWrap(true);left->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Preferred);left->setToolTip(name);
     auto* right=new QLabel("—");right->setObjectName("MetricValue");right->setAlignment(Qt::AlignRight|Qt::AlignVCenter);
     right->setMinimumWidth(0);
     row->addWidget(left,1);row->addWidget(right,0);
@@ -402,15 +489,15 @@ QWidget* StatsDock::buildHome() {
     systemSelector_->setToolTip(phrase("Показатель системного графика","System graph metric"));
     systemHeader->addWidget(systemSelector_);
     metricGrids_[0]=metricGrid(body);
-    cpuObs_=addMetric(metricGrids_[0],phrase("CPU OBS","OBS CPU"));
-    cpuPc_=addMetric(metricGrids_[0],phrase("CPU ПК","PC CPU"));
-    gpu_=addMetric(metricGrids_[0],phrase("GPU компьютера","Computer GPU"));
-    ramObs_=addMetric(metricGrids_[0],phrase("RAM OBS","OBS RAM"));
-    ramFree_=addMetric(metricGrids_[0],phrase("Своб. RAM","Free RAM"));
-    fps_=addMetric(metricGrids_[0],"FPS");
-    render_=addMetric(metricGrids_[0],phrase("Рендер","Render"));
-    renderDrop_=addMetric(metricGrids_[0],phrase("Пропуск ренд.","Render missed"));
-    encodeDrop_=addMetric(metricGrids_[0],phrase("Пропуск код.","Encode skipped"));
+    cpuObs_=addMetric(metricGrids_[0],phrase("CPU OBS","OBS CPU"),MetricGlyph::Chip,QColor("#72e9f4"));
+    cpuPc_=addMetric(metricGrids_[0],phrase("CPU ПК","PC CPU"),MetricGlyph::Monitor,QColor("#07df91"));
+    gpu_=addMetric(metricGrids_[0],phrase("GPU компьютера","Computer GPU"),MetricGlyph::Gpu,QColor("#b995ff"));
+    ramObs_=addMetric(metricGrids_[0],phrase("RAM OBS","OBS RAM"),MetricGlyph::Memory,QColor("#72e9f4"));
+    ramFree_=addMetric(metricGrids_[0],phrase("Своб. RAM","Free RAM"),MetricGlyph::Memory,QColor("#8ab7ff"));
+    fps_=addMetric(metricGrids_[0],"FPS",MetricGlyph::Gauge,QColor("#07df91"));
+    render_=addMetric(metricGrids_[0],phrase("Рендер","Render"),MetricGlyph::Timer,QColor("#ffdc45"));
+    renderDrop_=addMetric(metricGrids_[0],phrase("Пропуск ренд.","Render missed"),MetricGlyph::Frame,QColor("#ff8484"));
+    encodeDrop_=addMetric(metricGrids_[0],phrase("Пропуск код.","Encode skipped"),MetricGlyph::Encode,QColor("#f6a86c"));
     systemChart_=new Chart({{&cpuHistory_,QColor("#07df91")}});
     systemChart_->setSeries({{&cpuHistory_,QColor("#07df91")}},"%",phrase("CPU ПК","PC CPU"));
     QObject::connect(systemSelector_,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int index){
@@ -434,10 +521,10 @@ QWidget* StatsDock::buildHome() {
     streamCount_->setAlignment(Qt::AlignCenter);streamCount_->setToolTip(phrase("Активных потоковых выходов OBS","Active OBS stream outputs"));
     streamHeader->addWidget(streamCount_);
     metricGrids_[1]=metricGrid(body);
-    streamStatus_=addMetric(metricGrids_[1],phrase("Статус","Status"));
-    streamBitrate_=addMetric(metricGrids_[1],phrase("Общий битрейт","Total bitrate"));
-    streamBytes_=addMetric(metricGrids_[1],phrase("Отправлено","Sent"));
-    streamDrop_=addMetric(metricGrids_[1],phrase("Потери сети","Network loss"));
+    streamStatus_=addMetric(metricGrids_[1],phrase("Статус","Status"),MetricGlyph::Broadcast,QColor("#ffdc45"));
+    streamBitrate_=addMetric(metricGrids_[1],phrase("Общий битрейт","Total bitrate"),MetricGlyph::Upload,QColor("#ffdc45"));
+    streamBytes_=addMetric(metricGrids_[1],phrase("Отправлено","Sent"),MetricGlyph::Data,QColor("#9eb9ff"));
+    streamDrop_=addMetric(metricGrids_[1],phrase("Потери сети","Network loss"),MetricGlyph::Network,QColor("#ff8484"));
     body->addStretch(1);
     streamChart_=new Chart({{&streamHistory_,QColor("#ffdc45")}});
     streamChart_->setSeries({{&streamHistory_,QColor("#ffdc45")}},"kb/s",phrase("Общий битрейт","Total bitrate"));
@@ -450,13 +537,13 @@ QWidget* StatsDock::buildHome() {
     recordDetails_->setFixedHeight(18);recordDetails_->setCheckable(true);recordDetails_->setChecked(recordExpanded_);recordHeader->addWidget(recordDetails_);
     QObject::connect(recordDetails_,&QPushButton::toggled,this,[this](bool open){recordExpanded_=open;updateRecordDetails();});
     metricGrids_[2]=metricGrid(body);
-    recordStatus_=addMetric(metricGrids_[2],phrase("Статус","Status"));
-    recordBitrate_=addMetric(metricGrids_[2],phrase("Битрейт","Bitrate"));
-    recordFile_=addMetric(metricGrids_[2],phrase("Размер файла","File size"));
-    recordSpeed_=addMetric(metricGrids_[2],phrase("Скорость","Write speed"));
-    recordTime_=addMetric(metricGrids_[2],phrase("Время","Duration"));
-    recordDisk_=addMetric(metricGrids_[2],phrase("Диск свободен","Disk free"));
-    recordEta_=addMetric(metricGrids_[2],phrase("До заполн.","Until full"));
+    recordStatus_=addMetric(metricGrids_[2],phrase("Статус","Status"),MetricGlyph::Record,QColor("#ff647e"));
+    recordBitrate_=addMetric(metricGrids_[2],phrase("Битрейт","Bitrate"),MetricGlyph::Data,QColor("#72e9f4"));
+    recordFile_=addMetric(metricGrids_[2],phrase("Размер файла","File size"),MetricGlyph::File,QColor("#b995ff"));
+    recordSpeed_=addMetric(metricGrids_[2],phrase("Скорость","Write speed"),MetricGlyph::Speed,QColor("#07df91"));
+    recordTime_=addMetric(metricGrids_[2],phrase("Время","Duration"),MetricGlyph::Clock,QColor("#8ab7ff"));
+    recordDisk_=addMetric(metricGrids_[2],phrase("Диск свободен","Disk free"),MetricGlyph::Disk,QColor("#72e9f4"));
+    recordEta_=addMetric(metricGrids_[2],phrase("До заполн.","Until full"),MetricGlyph::Hourglass,QColor("#ffdc45"));
     body->addStretch(1);
     recordChart_=new Chart({{&recordHistory_,QColor("#72e9f4")}});
     recordChart_->setSeries({{&recordHistory_,QColor("#72e9f4")}},"kb/s",phrase("Битрейт записи","Record bitrate"));
@@ -598,7 +685,7 @@ void StatsDock::arrangeCards(){
     const int chartHeight=roomy?155:wide?22:60;
     for(auto* chart:{systemChart_,streamChart_,recordChart_})chart->setDisplayHeight(chartHeight);
     const int columns=((wide&&!roomy)||narrow)?1:2;
-    const int metricHeight=roomy?47:wide?13:narrow?26:34;
+    const int metricHeight=roomy?47:wide?18:narrow?26:34;
     const int metricFont=roomy?14:10;
     for(auto* grid:metricGrids_){
         QVector<QWidget*> rows;
@@ -625,6 +712,8 @@ void StatsDock::arrangeCards(){
         label->setStyleSheet(QString("color:#8ea1c0;font-size:%1px;").arg(metricFont));
     for(auto* label:home_->findChildren<QLabel*>("MetricValue"))
         label->setStyleSheet(QString("color:#dfe8ff;font-size:%1px;font-weight:700;").arg(metricFont));
+    for(auto* icon:home_->findChildren<QWidget*>("MetricIcon"))
+        icon->setFixedSize(roomy?24:wide?13:16,roomy?24:wide?13:16);
     const auto accentValue=[&](QLabel* label,const char* color){
         label->setStyleSheet(QString("color:%1;font-size:%2px;font-weight:700;").arg(color).arg(metricFont));
     };
