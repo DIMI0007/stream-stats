@@ -8,7 +8,7 @@ System load, streaming and recording in one OBS panel. The layout works vertical
 
 - Computer and OBS CPU, computer GPU, memory, FPS and frame loss.
 - Colorful icons make each metric easier to spot in narrow, vertical and horizontal layouts.
-- Total streaming bitrate, data sent and active output count.
+- Total streaming bitrate, data sent and active output count for Twitch, YouTube, Kick and other OBS outputs.
 - Recording speed, file size, duration and free disk space.
 - Charts covering 1, 5 or 15 minutes, with values under the pointer.
 - Optional frame loss and low disk warnings, plus a session summary that can be saved as CSV.
@@ -16,7 +16,7 @@ System load, streaming and recording in one OBS panel. The layout works vertical
 
 ## How the plugins work together
 
-Stream Stats works on its own for system, streaming and recording statistics. If Chat or Notify is installed, Stats reads its local counters inside OBS. A missing plugin appears as “Not loaded.” Stats does not receive chat messages, send announcements or transfer network traffic between plugins.
+Stream Stats works on its own for system, streaming and recording statistics. Three separate Twitch, YouTube and Kick outputs appear as three streams and their bitrate is added together. If Chat or Notify is installed, Stats reads its local counters inside OBS. A missing plugin appears as “Not loaded.” Stats does not receive chat messages, send announcements or transfer network traffic between plugins.
 
 ## Install
 
