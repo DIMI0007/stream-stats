@@ -3,6 +3,20 @@
 #include <cstdio>
 
 int main() {
+    {
+        stats::StreamAccumulator three;
+        stats::OutputReading twitch;twitch.identity=101;twitch.active=true;twitch.stream=true;twitch.name="Twitch";
+        auto youtube=twitch;youtube.identity=102;youtube.name="YouTube";
+        auto kick=twitch;kick.identity=103;kick.name="Kick";
+        auto initial=three.update({twitch,youtube,kick,kick},1.0);
+        if(initial.activeOutputs!=3||initial.outputNames.size()!=3)return 14;
+        twitch.bytes=1000000;youtube.bytes=2000000;kick.bytes=1500000;
+        const auto total=three.update({twitch,youtube,kick,kick},1.0);
+        if(total.activeOutputs!=3||std::abs(total.kbps-36000.0)>0.01||total.totalBytes!=4500000||!total.outputNames.contains("Kick"))return 15;
+        kick.active=false;twitch.bytes+=1000000;youtube.bytes+=2000000;
+        const auto stopped=three.update({twitch,youtube,kick},1.0);
+        if(stopped.activeOutputs!=2||std::abs(stopped.kbps-24000.0)>0.01||stopped.totalBytes!=7500000)return 16;
+    }
     stats::StreamAccumulator accumulator;
     stats::OutputReading first;first.identity=1;first.active=true;first.stream=true;
     first.name="Twitch output";
